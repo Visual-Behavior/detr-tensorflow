@@ -3,9 +3,35 @@ import tensorflow as tf
 import numpy as np
 import imageio
 from skimage.color import gray2rgb
+import os
 
+from inference import numpy_bbox_to_image
 from data.augmentation import detr_aug #ImageWithLabelsAug
+import matplotlib.pyplot as plt
 
+
+# > 2.3
+if int(tf.__version__.split('.')[1]) > 3:
+    RAGGED = True
+else:
+    RAGGED = False
+
+CLASS_NAME = [
+    'N/A', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
+    'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A',
+    'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse',
+    'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 'N/A', 'backpack',
+    'umbrella', 'N/A', 'N/A', 'handbag', 'tie', 'suitcase', 'frisbee', 'skis',
+    'snowboard', 'sports ball', 'kite', 'baseball bat', 'baseball glove',
+    'skateboard', 'surfboard', 'tennis racket', 'bottle', 'N/A', 'wine glass',
+    'cup', 'fork', 'knife', 'spoon', 'bowl', 'banana', 'apple', 'sandwich',
+    'orange', 'broccoli', 'carrot', 'hot dog', 'pizza', 'donut', 'cake',
+    'chair', 'couch', 'potted plant', 'bed', 'N/A', 'dining table', 'N/A',
+    'N/A', 'toilet', 'N/A', 'tv', 'laptop', 'mouse', 'remote', 'keyboard',
+    'cell phone', 'microwave', 'oven', 'toaster', 'sink', 'refrigerator', 'N/A',
+    'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier',
+    'toothbrush', "back"
+]
 
 def get_catid_to_info(coco):
     # Get the list of all categories
@@ -27,38 +53,49 @@ def normalized_images(image):
 
 
 def get_coco_labels(coco, img_id, image_shape):
-    # In the coco dataset the path is split into two part
-    # the real path and the id of the associated image (path:id)
-    #print("path_info", path_info)
-
-    #path_info = path_info.decode('utf8').split(":")
-    #path, img_info = path_info[0], path_info[1]
-    #img_id, img_height, img_width = img_info.split("-")
-    #bbox = np.zeros((100, 4))
     
     bbox = []
+    t_class = []
+
     # Load the labels the instances
     ann_ids = coco.getAnnIds(imgIds=img_id)
     anns = coco.loadAnns(ann_ids)
     size = len(anns)
     b = 1
 
-    
-    for ann in anns:
+    if not RAGGED:
+        bbox = np.zeros((100, 4))
+        t_class = np.zeros((100, 1))
 
-        #print("ann", ann)
+    nb_bbox = 0
+    for a, ann in enumerate(anns):
+        # Target bbox
+        bbox_x, bbox_y, bbox_w, bbox_h = ann['bbox'] 
+        # target class
+        t_cls = ann["category_id"]
 
-        bbox_x, bbox_y, bbox_w, bbox_h = ann['bbox']
         x_center = bbox_x + (bbox_w / 2)
         y_center = bbox_y + (bbox_h / 2)
         x_center = x_center / float(image_shape[1])
         y_center = y_center / float(image_shape[0])
         bbox_w = bbox_w / float(image_shape[1])
         bbox_h = bbox_h / float(image_shape[0])
-        bbox.append([x_center, y_center, bbox_w, bbox_h])
+        
+        if RAGGED:            
+            bbox.append([x_center, y_center, bbox_w, bbox_h])
+            t_class.append([t_cls])
+        else:
+            bbox[a+1] = [x_center, y_center, bbox_w, bbox_h]
+            t_class[a+1][0] = t_cls
+        nb_bbox += 1
+
+    if not RAGGED:
+        bbox[0][0] = nb_bbox # A is the number of bbox
 
     bbox = np.array(bbox)
-    return bbox.astype(np.float32)
+    t_class = np.array(t_class)
+
+    return bbox.astype(np.float32), t_class.astype(np.int32)
 
 
 def get_coco(coco_dir, coco, coco_id, train_val):
@@ -79,34 +116,34 @@ def get_coco(coco_dir, coco, coco_id, train_val):
     if len(image.shape) == 2:
         image = gray2rgb(image)
 
-    bbox = get_coco_labels(coco, coco_id, image.shape)
+    t_bbox, t_class = get_coco_labels(coco, coco_id, image.shape)
 
-    if len(bbox) == 0:
-        return None, None
+    if (not RAGGED and t_bbox[0][0] == 0) or (RAGGED and len(t_bbox) == 0):
+        return None, None, None
 
-    image, bbox = detr_aug(image, bbox)
-    if len(bbox) == 0:
-        return None, None
+    image, t_bbox, t_class = detr_aug(image, t_bbox,  t_class)
+    if (not RAGGED and t_bbox[0][0] == 0) or (RAGGED and len(t_bbox) == 0):
+        return None, None, None
 
-    #print("image bbox after aug", image.shape, bbox.shape)
     image = normalized_images(image)
 
-    bbox = np.transpose(bbox, [1, 0])
-    bbox = tf.ragged.constant(bbox, dtype=tf.float32)
+    if RAGGED:
+        t_bbox = tf.ragged.constant(t_bbox, dtype=tf.float32)
+        t_class = tf.ragged.constant(t_class, dtype=tf.int64)
 
-    return image, bbox
+    return image, t_bbox, t_class
 
 def coco_generator(coco_dir, coco, img_ids, train_val):
     ids = np.random.randint(0, len(img_ids), (len(img_ids),))
     for _id in ids:
-        image, bbox = get_coco(coco_dir, coco, img_ids[_id], train_val)
+        image, bbox, t_class = get_coco(coco_dir, coco, img_ids[_id], train_val)
         if image is None:
             continue
-        yield image, bbox 
+        yield image, bbox, t_class
 
 
 
-def load_coco(coco_dir, train_val):
+def load_coco(coco_dir, train_val, batch_size):
     """
     """
     if train_val == "train":
@@ -122,27 +159,45 @@ def load_coco(coco_dir, train_val):
 
     img_ids = coco.getImgIds()
     
-    #def gen():
-    #    ragged_tensor = tf.ragged.constant([[1, 2], [3]])
-    #    yield 42, ragged_tensor
-    #dataset = tf.data.Dataset.from_generator(gen, output_signature=(
-    #     tf.TensorSpec(shape=(), dtype=tf.int32),
-    #     tf.RaggedTensorSpec(shape=(2, None), dtype=tf.int32)))
+    if RAGGED:
+        params = {"output_signature": (
+            tf.TensorSpec(shape=(None, None, 3), dtype=tf.float32),
+            tf.RaggedTensorSpec(shape=(None, 4), dtype=tf.float32),
+            tf.RaggedTensorSpec(shape=(None, 1), dtype=tf.int64)
+        )}
+    else:
+        params =  {"output_types": (
+                tf.float32,
+                tf.float32,
+                tf.int64
+            ),
+            "output_shapes": (
+                tf.TensorShape([None, None, 3]),
+                tf.TensorShape([100, 4]),
+                tf.TensorShape([100, 1])
+        )}
 
-    dataset = tf.data.Dataset.from_generator(lambda : coco_generator(coco_dir, coco, img_ids, "val"), output_signature=(
-         tf.TensorSpec(shape=(None, None, 3), dtype=tf.float32),
-         tf.RaggedTensorSpec(shape=(4, None), dtype=tf.float32)
-    ))
-    dataset = dataset.batch(8)
+    dataset = tf.data.Dataset.from_generator(lambda : coco_generator(coco_dir, coco, img_ids, "val"), **params)
+    dataset = dataset.batch(batch_size)
 
-    for images, target_bbox in dataset:
+    return dataset
+
+
+if __name__ == "__main__":
+    import argparse
+    from epoch import run_epoch
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--cocodir",  type=str, required=True, help="/path/to/coco")
+    args = parser.parse_args()
+    train_dt = load_coco(args.cocodir, "val", batch_size=1)
+
+    for images, target_bbox, target_class in train_dt:
         print(images.shape)
         print(target_bbox.shape)
+        print(target_class.shape)
         print('--')
-        #print("v", v.shape, tf.reduce_max(v), tf.reduce_min(v))
+        image = numpy_bbox_to_image(np.array(images[0]), bbox_list=target_bbox[0].numpy(), labels=target_class[0].numpy(), class_name=CLASS_NAME, unnormalized=True)
 
-    # Setup tensorflow dataset
-    #dataset = tf.data.Dataset.from_tensor_slices(imgs_ids)
-    #dataset = dataset.map(load_ann)
-
+        plt.imshow(image)
+        plt.show()
 

@@ -1,9 +1,9 @@
 import tensorflow as tf
 import bbox
-from hungarian_matching import hungarian_matching
+from loss.hungarian_matching import hungarian_matching
 
-# > 2.3
-if int(tf.__version__.split('.')[1]) > 3:
+# > 2.3.x
+if int(tf.__version__.split('.')[1]) >= 4:
     RAGGED = True
 else:
     RAGGED = False
@@ -81,6 +81,7 @@ def loss_boxes(p_bbox, p_class, t_bbox, t_class, t_indices, p_indices, t_selecto
     p_bbox = tf.gather(p_bbox, p_indices)
     t_bbox = tf.gather(t_bbox, t_indices)
 
+
     p_bbox_xy = bbox.xcycwh_to_xy_min_xy_max(p_bbox)
     t_bbox_xy = bbox.xcycwh_to_xy_min_xy_max(t_bbox)
 
@@ -156,6 +157,7 @@ def get_detr_losses(m_outputs, target_bbox, target_label, config, suffix=""):
     all_predcted_indices = tf.concat(all_predcted_indices, axis=0)
     all_target_selector = tf.concat(all_target_selector, axis=0)
     all_predcted_selector = tf.concat(all_predcted_selector, axis=0)
+
 
     label_cost, true_neg, true_pos, pos_accuracy = loss_labels(
         all_predicted_bbox,

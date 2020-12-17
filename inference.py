@@ -1,3 +1,4 @@
+import tensorflow as tf
 import numpy as np
 import cv2
 
@@ -59,3 +60,31 @@ def numpy_bbox_to_image(image, bbox_list, labels=None, scores=None, class_name=[
         cv2.rectangle(image, (x1, y1), (x2, y2), tuple(class_color.tolist()), 2)
 
     return image
+
+
+def get_model_inference(m_outputs: dict, background_class, bbox_format="xy_center"):
+
+    predicted_bbox = m_outputs["pred_boxes"][0]
+    predicted_labels = m_outputs["pred_logits"][0]
+
+    softmax = tf.nn.softmax(predicted_labels)
+    predicted_scores = tf.reduce_max(softmax, axis=-1)
+    predicted_labels = tf.argmax(softmax, axis=-1)
+    indices = tf.where(predicted_labels != background_class)
+    indices = tf.squeeze(indices, axis=-1)
+
+    predicted_scores = tf.gather(predicted_scores, indices)
+    predicted_labels = tf.gather(predicted_labels, indices)
+    predicted_bbox = tf.gather(predicted_bbox, indices)
+
+
+    if bbox_format == "xy_center":
+        predicted_bbox = predicted_bbox
+    elif bbox_format == "xyxy":
+        predicted_bbox = bbox.xcycwh_to_xy_min_xy_max(predicted_bbox)
+    elif bbox_format == "yxyx":
+        predicted_bbox = bbox.xcycwh_to_yx_min_yx_max(predicted_bbox)
+    else:
+        raise NotImplementedError()
+
+    return predicted_bbox, predicted_labels, predicted_scores

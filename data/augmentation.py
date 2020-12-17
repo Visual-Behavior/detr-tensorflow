@@ -140,6 +140,7 @@ def detr_aug(image, bbox, t_class):
 
     # Prepare the augmenation input pipeline
     images_batch, bbox_batch = prepare_aug_inputs(image, bbox, t_class)
+
     seq = detr_aug_seq()
 
     # Run the pipeline in a deterministic manner

@@ -10,8 +10,7 @@ from data.augmentation import detr_aug #ImageWithLabelsAug
 import matplotlib.pyplot as plt
 
 
-# > 2.3
-if int(tf.__version__.split('.')[1]) > 3:
+if int(tf.__version__.split('.')[1]) >= 4:
     RAGGED = True
 else:
     RAGGED = False
@@ -52,7 +51,7 @@ def normalized_images(image):
     return image
 
 
-def get_coco_labels(coco, img_id, image_shape):
+def get_coco_labels(coco, img_id, image_shape, augmentation):
     
     bbox = []
     t_class = []
@@ -70,9 +69,15 @@ def get_coco_labels(coco, img_id, image_shape):
     nb_bbox = 0
     for a, ann in enumerate(anns):
         # Target bbox
+
+        if ann["iscrowd"]:
+            return None, None
+
         bbox_x, bbox_y, bbox_w, bbox_h = ann['bbox'] 
         # target class
         t_cls = ann["category_id"]
+        #print("t_cls", t_cls)
+
 
         x_center = bbox_x + (bbox_w / 2)
         y_center = bbox_y + (bbox_h / 2)
@@ -98,7 +103,7 @@ def get_coco_labels(coco, img_id, image_shape):
     return bbox.astype(np.float32), t_class.astype(np.int32)
 
 
-def get_coco(coco_dir, coco, coco_id, train_val):
+def get_coco(coco_dir, coco, coco_id, train_val, augmentation):
 
     img = coco.loadImgs(coco_id)[0]
 
@@ -116,14 +121,15 @@ def get_coco(coco_dir, coco, coco_id, train_val):
     if len(image.shape) == 2:
         image = gray2rgb(image)
 
-    t_bbox, t_class = get_coco_labels(coco, coco_id, image.shape)
+    t_bbox, t_class = get_coco_labels(coco, coco_id, image.shape, augmentation)
 
-    if (not RAGGED and t_bbox[0][0] == 0) or (RAGGED and len(t_bbox) == 0):
+    if t_bbox is None or t_class is None or  (not RAGGED and t_bbox[0][0] == 0) or (RAGGED and len(t_bbox) == 0):
         return None, None, None
 
-    image, t_bbox, t_class = detr_aug(image, t_bbox,  t_class)
-    if (not RAGGED and t_bbox[0][0] == 0) or (RAGGED and len(t_bbox) == 0):
-        return None, None, None
+    if augmentation:
+        image, t_bbox, t_class = detr_aug(image, t_bbox,  t_class)
+        if (not RAGGED and t_bbox[0][0] == 0) or (RAGGED and len(t_bbox) == 0):
+            return None, None, None
 
     image = normalized_images(image)
 
@@ -133,17 +139,18 @@ def get_coco(coco_dir, coco, coco_id, train_val):
 
     return image, t_bbox, t_class
 
-def coco_generator(coco_dir, coco, img_ids, train_val):
+
+def coco_generator(coco_dir, coco, img_ids, train_val, augmentation):
     ids = np.random.randint(0, len(img_ids), (len(img_ids),))
     for _id in ids:
-        image, bbox, t_class = get_coco(coco_dir, coco, img_ids[_id], train_val)
+        image, bbox, t_class = get_coco(coco_dir, coco, img_ids[_id], train_val, augmentation)
         if image is None:
             continue
         yield image, bbox, t_class
 
 
 
-def load_coco(coco_dir, train_val, batch_size):
+def load_coco(coco_dir, train_val, batch_size, augmentation=False):
     """
     """
     if train_val == "train":
@@ -177,8 +184,8 @@ def load_coco(coco_dir, train_val, batch_size):
                 tf.TensorShape([100, 1])
         )}
 
-    dataset = tf.data.Dataset.from_generator(lambda : coco_generator(coco_dir, coco, img_ids, "val"), **params)
-    dataset = dataset.batch(batch_size)
+    dataset = tf.data.Dataset.from_generator(lambda : coco_generator(coco_dir, coco, img_ids, train_val, augmentation=augmentation), **params)
+    dataset = dataset.batch(batch_size, drop_remainder=True)
 
     return dataset
 
@@ -190,6 +197,7 @@ if __name__ == "__main__":
     parser.add_argument("--cocodir",  type=str, required=True, help="/path/to/coco")
     args = parser.parse_args()
     train_dt = load_coco(args.cocodir, "val", batch_size=1)
+
 
     for images, target_bbox, target_class in train_dt:
         print(images.shape)

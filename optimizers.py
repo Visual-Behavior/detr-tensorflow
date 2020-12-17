@@ -31,21 +31,23 @@ def get_nlayers_trainables_variables(model, nlayers_names):
 
 def get_trainable_variables(model, config):
 
+    disable_batchnorm_training(model)
+
     backbone_variables = []
     transformers_variables = []
     nlayers_variables = []
 
+
     # Retrieve the gradient ofr each trainable variables
     if config.train_backbone:
-        disable_batchnorm_training(model)
         backbone_variables = get_backbone_trainable_variables(model)
     if config.train_transformers:
         transformers_variables = get_transformers_trainable_variables(model, exclude=[])
     if config.train_nlayers:
         nlayers_variables = get_nlayers_trainables_variables(model, [])
 
-    trainables_variables = backbone_variables + transformers_variables + nlayers_variables
-    return trainables_variables
+    
+    return backbone_variables, transformers_variables, nlayers_variables
 
 
 def setup_optimizers(model, config):
@@ -72,9 +74,16 @@ def setup_optimizers(model, config):
     nlayers_optimizer = tf.keras.optimizers.Adam(learning_rate=get_nlayers_learning_rate, clipnorm=config.gradient_norm_clipping)
 
     # Set trainable variables
-    backbone_variables = get_backbone_trainable_variables(model)
-    transformers_variables = get_transformers_trainable_variables(model, exclude=[])
-    nlayers_variables = get_nlayers_trainables_variables(model, [])
+
+    backbone_variables, transformers_variables, nlayers_variables = [], [], []
+
+    if config.train_backbone:
+        backbone_variables = get_backbone_trainable_variables(model)
+    if config.train_transformers:
+        transformers_variables = get_transformers_trainable_variables(model, exclude=[])
+    if config.train_nlayers:
+        nlayers_variables = get_nlayers_trainables_variables(model, [])
+
 
     return {
         "backbone_optimizer": backbone_optimizer,
@@ -89,7 +98,9 @@ def setup_optimizers(model, config):
 
 def gather_gradient(model, optimizers, total_loss, tape, config, log):
 
-    trainables_variables = get_trainable_variables(model, config)
+    backbone_variables, transformers_variables, nlayers_variables = get_trainable_variables(model, config)
+    trainables_variables = backbone_variables + transformers_variables + nlayers_variables
+
     gradients = tape.gradient(total_loss, trainables_variables)
 
     # Retrieve the gradients from the tap
@@ -125,10 +136,10 @@ def aggregate_grad_and_apply(name, optimizers, gradients, step, config):
 
     if getattr(config, train_part_name):
 
-
         # Init the aggregate gradient
         if gradient_aggregate is not None and step % gradient_aggregate == 0:
             optimizers[gradient_name] = [tf.zeros_like(tv) for tv in optimizers[variables_name]]
+
 
         if gradient_aggregate is not None:
             # Aggregate the gradient

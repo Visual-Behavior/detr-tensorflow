@@ -14,6 +14,7 @@ from main import args_to_config
 from loss.compute_map import cal_map, calc_map, APDataObject
 from networks.detr import get_detr_model
 from bbox import xcycwh_to_xy_min_xy_max, xcycwh_to_yx_min_yx_max
+from inference import numpy_bbox_to_image
 
 parser = argparse.ArgumentParser()
 # Dataset info
@@ -44,11 +45,6 @@ COCO_CLASS_NAME = [
 ]
 
 
-@tf.function(experimental_relax_shapes=True)
-def step(model, images):
-    m_outputs = model(images, training=False)
-    predicted_bbox, predicted_labels, predicted_scores = get_model_inference(m_outputs, 91, bbox_format="yxyx")
-    return predicted_bbox, predicted_labels, predicted_scores
 
 
 def eval_model(config):
@@ -62,10 +58,26 @@ def eval_model(config):
         'mask': [[APDataObject() for _ in COCO_CLASS_NAME] for _ in iou_thresholds]
     }
 
+
+
+    @tf.function(experimental_relax_shapes=True) #(input_signature=[tf.TensorSpec(shape=(1, None, None, 3), dtype=tf.float32)])
+    def step(images):
+        m_outputs = model(images, training=False)
+        predicted_bbox, predicted_labels, predicted_scores = get_model_inference(m_outputs, 91, bbox_format="yxyx")
+        return predicted_bbox, predicted_labels, predicted_scores
+
+
     it = 0
     for images, target_bbox, target_class in train_dt:
 
-        p_bbox, p_labels, p_scores = step(model, images)
+        print('images', images.shape)
+        continue
+
+        image = numpy_bbox_to_image(images[0].numpy(), bbox_list=target_bbox[0].numpy(), labels=target_class[0].numpy(), class_name=COCO_CLASS_NAME, unnormalized=True)
+        plt.imshow(image)
+        plt.savefig('test_eval.png')
+
+        p_bbox, p_labels, p_scores = step(images)
         p_mask = None
 
 
@@ -84,6 +96,8 @@ def eval_model(config):
 
         print(f"Computing map.....{it}", end="\r")
         it += 1
+        if it > 200:
+            break
 
     # Compute the mAp
     calc_map(ap_data, iou_thresholds, COCO_CLASS_NAME, print_result=True)

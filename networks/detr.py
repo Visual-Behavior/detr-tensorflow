@@ -99,7 +99,7 @@ class DETR(tf.keras.Model):
         super().build(input_shape, **kwargs)
 
 
-def get_detr_model(finetuning=False, nb_class=None, num_decoder_layers=6, num_encoder_layers=6):
+def get_detr_model(finetuning=False, load_backbone=False, nb_class=None, num_decoder_layers=6, num_encoder_layers=6):
     """
     Parameters
     ----------
@@ -122,11 +122,13 @@ def get_detr_model(finetuning=False, nb_class=None, num_decoder_layers=6, num_en
     if finetuning:
         backbone = detr.get_layer("backbone")
     else:
-        detr_pt = DETR(num_decoder_layers=num_decoder_layers, num_encoder_layers=num_encoder_layers)
-        l = detr_pt.load_weights(os.path.join(Path.home(), "weights/detr/dert.ckpt"))
-        l.expect_partial()
-        #backbone = get_backbone((None, None, 3), "resnet50", backbone_weights="imagenet", backbone_layers=["conv5_block3_out"])
-        backbone = detr_pt.get_layer("backbone")
+        if load_backbone:
+            detr_pt = DETR(num_decoder_layers=num_decoder_layers, num_encoder_layers=num_encoder_layers)
+            l = detr_pt.load_weights(os.path.join(Path.home(), "weights/detr/dert.ckpt"))
+            l.expect_partial()
+            backbone = detr_pt.get_layer("backbone")
+        else:
+            backbone = tf.keras.applications.ResNet50(include_top=False, weights="imagenet", input_shape=(None, None, 3))
 
 
     # Transformer

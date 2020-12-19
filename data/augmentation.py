@@ -63,24 +63,68 @@ def prepare_aug_inputs(image, bbox, t_class):
     return images_batch, bbox_batch
 
 
-def detr_aug_seq():
+def detr_aug_seq(image, augmenation):
 
-    SIZE = 540
 
     sometimes = lambda aug: iaa.Sometimes(0.5, aug)
-    seq = iaa.Sequential([
-        # Horizontal flips
-        iaa.Fliplr(0.5),
-        iaa.OneOf([
-            iaa.Resize({"width": SIZE, "height": SIZE}, interpolation=ia.ALL),
-            iaa.Sequential([
+
+    target_min_side_size = 480
+
+    # According to the paper
+    min_side_min = 480
+    min_side_max = 800 
+    max_side_max = 1333
+
+    if augmenation:
+
+        # Fixe size mode
+        image_size = 376, 672
+        seq = iaa.Sequential([
+            iaa.Fliplr(0.5), # horizontal flips
+            sometimes(iaa.OneOf([
+                # Resize complety the image
+                iaa.Resize({"width": image_size[1], "height": image_size[0]}, interpolation=ia.ALL),
+                # Crop into the image
+                iaa.CropToFixedSize(image_size[1], image_size[0]),
+                # Affine transform
                 iaa.Affine(
-                    scale={"x": (0.5, 1.3), "y": (0.5, 1.3)}, 
-                ),
-                iaa.Resize({"width": SIZE, "height": SIZE}, interpolation=ia.ALL),
-            ]),
-        ]) 
-    ], random_order=False)
+                    scale={"x": (0.5, 1.5), "y": (0.5, 1.5)}, 
+                )
+            ])),
+            # Be sure to resize to the target image size
+            iaa.Resize({"width": image_size[1], "height": image_size[0]}, interpolation=ia.ALL)
+        ], random_order=False) # apply augmenters in random order
+    
+        return seq
+
+    else:
+
+        # Fixe size mode
+        image_size = 376, 672
+        seq = iaa.Sequential([
+            # Be sure to resize to the target image size
+            iaa.Resize({"width": image_size[1], "height": image_size[0]})
+        ], random_order=False) # apply augmenters in random order
+    
+        return seq
+
+        """ Mode paper evaluation
+        # Evaluation mode, we took the largest min side the model is trained on
+        target_min_side_size = 480 
+        image_min_side = min(float(image.shape[0]), float(image.shape[1]))
+        image_max_side = max(float(image.shape[0]), float(image.shape[1]))
+        
+        min_side_scaling = target_min_side_size / image_min_side
+        max_side_scaling = max_side_max / image_max_side
+        scaling = min(min_side_scaling, max_side_scaling)
+
+        n_height = int(scaling * image.shape[0])
+        n_width = int(scaling * image.shape[1])
+
+        seq = iaa.Sequential([
+            iaa.Resize({"height": n_height, "width": n_width}),
+        ])
+        """
 
     return seq
 
@@ -130,18 +174,20 @@ def retrieve_outputs(augmented_images, augmented_bbox):
     image = augmented_images[0].astype(np.float32)
     augmented_bbox = augmented_bbox[0]
 
-    bbox, t_class = imgaug_bbox_to_xcyc_wh(augmented_bbox, image.shape[0], image.shape[0])
+    bbox, t_class = imgaug_bbox_to_xcyc_wh(augmented_bbox, image.shape[0], image.shape[1])
 
     return image, bbox, t_class
 
 
 
-def detr_aug(image, bbox, t_class):
+def detr_aug(image, bbox, t_class, augmentation):
 
+    #print("1) bbox", bbox)
     # Prepare the augmenation input pipeline
     images_batch, bbox_batch = prepare_aug_inputs(image, bbox, t_class)
+    #print("2) bbox_batch", bbox_batch)
 
-    seq = detr_aug_seq()
+    seq = detr_aug_seq(image, augmentation)
 
     # Run the pipeline in a deterministic manner
     seq_det = seq.to_deterministic()
@@ -155,12 +201,16 @@ def detr_aug(image, bbox, t_class):
         img_aug = seq_det.augment_image(img)
         bbox_aug = seq_det.augment_bounding_boxes(bbox)
 
+        #print("3) bbox_aug", bbox_aug)
+
         for b, bbox_instance in enumerate(bbox_aug.items):
             setattr(bbox_instance, "instance_id", b+1)
 
         bbox_aug = bbox_aug.remove_out_of_image_fraction(0.7)
         segmap_aug = None
         bbox_aug = bbox_aug.clip_out_of_image()
+
+        #print("4) bbox_aug", bbox_aug)
 
         augmented_images.append(img_aug)
         augmented_bbox.append(bbox_aug)

@@ -3,7 +3,8 @@ import tensorflow as tf
 
 
 class PositionEmbeddingSine(tf.keras.Model):
-    # These are the default parameters used in the original project
+
+
     def __init__(self, num_pos_features=64, temperature=10000,
                  normalize=False, scale=None, eps=1e-6, **kwargs):
         super().__init__(**kwargs)

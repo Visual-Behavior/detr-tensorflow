@@ -19,6 +19,7 @@ from optimizers import gather_gradient, aggregate_grad_and_apply
 from logger.training_logging import train_log, valid_log
 from loss.loss import get_losses
 from inference import numpy_bbox_to_image
+from training_config import TrainingConfig
 
 parser = argparse.ArgumentParser()
 
@@ -48,13 +49,9 @@ parser.add_argument("--log",  required=False, action="store_true", default=False
 
 import wandb
 
-class Config:
-    global_step = 0
-    pass
-
 def args_to_config(args):
     args = vars(args)
-    config = Config()
+    config = TrainingConfig()
     for key in args:
         setattr(config, key, args[key])
     return config
@@ -142,13 +139,15 @@ def run_validation(model, valid_dt, optimizers, config, evaluation_step=200):
 def run_training(args):
 
     config = args_to_config(args)
+    config.normalized_method = "tf_resnet50"
 
     model = get_detr_model(finetuning=config.finetuning, load_backbone=config.load_backbone)
 
     # Load the training dataset
-    train_dt = load_coco(args.cocodir, "val", batch_size=config.batch_size, augmentation=True)
+    train_dt = load_coco(args.cocodir, "val", config.batch_size, config, augmentation=True)
     # Load the validation dataset
-    valid_dt = load_coco(args.cocodir, "val", batch_size=1)
+    valid_dt = load_coco(args.cocodir, "val", 1, config)
+
     # Setup the optimziers and the trainable variables
     optimzers = setup_optimizers(model, args)
 

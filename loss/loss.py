@@ -119,7 +119,7 @@ def get_detr_losses(m_outputs, target_bbox, target_label, config, suffix=""):
     t_offset = 0
     p_offset = 0
 
-    for b in range(config.batch_size):
+    for b in range(predicted_bbox.shape[0]):
 
         p_bbox, p_class, t_bbox, t_class = predicted_bbox[b], predicted_label[b], target_bbox[b], target_label[b]
 

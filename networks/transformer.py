@@ -249,15 +249,36 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
     def build(self, input_shapes):
         in_dim = sum([shape[-1] for shape in input_shapes[:3]])
-        self.in_proj_weight = tf.Variable(
-            tf.zeros((in_dim, self.model_dim), dtype=tf.float32), name='in_proj_kernel')
-        self.in_proj_bias = tf.Variable(tf.zeros((in_dim,), dtype=tf.float32),
-                                        name='in_proj_bias')
 
-        self.out_proj_weight = tf.Variable(
-            tf.zeros((self.model_dim, self.model_dim), dtype=tf.float32), name='out_proj_kernel')
-        self.out_proj_bias = tf.Variable(
-            tf.zeros((self.model_dim,), dtype=tf.float32), name='out_proj_bias')
+        self.in_proj_weight = self.add_weight(
+            name='in_proj_kernel', shape=(in_dim, self.model_dim),
+            initializer=tf.keras.initializers.GlorotUniform(), dtype=tf.float32, trainable=True
+        )
+        self.in_proj_bias = self.add_weight(
+            name='in_proj_bias', shape=(in_dim,),
+            initializer=tf.keras.initializers.GlorotUniform(), dtype=tf.float32, trainable=True
+        )
+        self.out_proj_weight = self.add_weight(
+            name='out_proj_kernel', shape=(self.model_dim, self.model_dim),
+            initializer=tf.keras.initializers.GlorotUniform(), dtype=tf.float32, trainable=True
+        )
+        self.out_proj_bias = self.add_weight(
+            name='out_proj_bias', shape=(self.model_dim,),
+            initializer=tf.keras.initializers.GlorotUniform(), dtype=tf.float32, trainable=True
+        )
+
+
+
+
+        #self.in_proj_weight = tf.Variable(
+        #    tf.zeros((in_dim, self.model_dim), dtype=tf.float32), name='in_proj_kernel')
+        #self.in_proj_bias = tf.Variable(tf.zeros((in_dim,), dtype=tf.float32),
+        #                                name='in_proj_bias')
+
+        #self.out_proj_weight = tf.Variable(
+        #    tf.zeros((self.model_dim, self.model_dim), dtype=tf.float32), name='out_proj_kernel')
+        #self.out_proj_bias = tf.Variable(
+        #    tf.zeros((self.model_dim,), dtype=tf.float32), name='out_proj_bias')
 
 
 

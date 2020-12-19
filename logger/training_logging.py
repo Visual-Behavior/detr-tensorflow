@@ -26,7 +26,8 @@ def tf_send_batch_log_to_wandb(images, target_bbox, target_class,  m_outputs: di
     # Warning: In graph mode, this class is init only once. In eager mode, this class is init at each step.
     img_sender = WandbSender()
 
-    for b in range(config.batch_size):
+    predicted_bbox = m_outputs["pred_boxes"]
+    for b in range(predicted_bbox.shape[0]):
         # Select within the batch the elements at indice b
         image = images[b]
         
@@ -56,8 +57,9 @@ def tf_send_batch_log_to_wandb(images, target_bbox, target_class,  m_outputs: di
 
 
 def compute_map_on_batch(images, target_bbox, target_class,  m_outputs: dict, config, class_name=[], step=None, send=True, prefix=""): 
-
-    for b in range(config.batch_size):
+    predicted_bbox = m_outputs["pred_boxes"]
+    batch_size = predicted_bbox.shape[0]
+    for b in range(batch_size):
 
         image = images[b]
         elem_m_outputs = {key:m_outputs[key][b:b+1] if (m_outputs[key] is not None and not isinstance(m_outputs[key], list)) else m_outputs[key] for key in m_outputs}
@@ -83,7 +85,7 @@ def compute_map_on_batch(images, target_bbox, target_class,  m_outputs: dict, co
             np.array(predicted_labels), np.array(predicted_scores), 
             np.array(t_bbox), 
             np.array(t_class), 
-            b, config.batch_size, prefix, step, send, pred_mask, target_mask)
+            b, batch_size, prefix, step, send, pred_mask, target_mask)
 
 
 

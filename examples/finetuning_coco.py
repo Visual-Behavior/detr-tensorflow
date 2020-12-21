@@ -28,7 +28,7 @@ def build_model(config):
     See examples/finetuning_voc.py to add new layers.
     """
     # Load the pretrained model
-    detr = get_detr_model(include_top=True, weights="detr")
+    detr = get_detr_model(config, include_top=True, weights="detr")
     detr.summary()
     return detr
 

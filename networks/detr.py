@@ -92,7 +92,7 @@ class DETR(tf.keras.Model):
         super().build(input_shape, **kwargs)
 
 
-def get_detr_model(include_top=False, weights=None, tf_backbone=False, num_decoder_layers=6, num_encoder_layers=6):
+def get_detr_model(config, include_top=False, weights=None, tf_backbone=False, num_decoder_layers=6, num_encoder_layers=6):
     """ Get the DETR model
 
     Parameters
@@ -120,6 +120,7 @@ def get_detr_model(include_top=False, weights=None, tf_backbone=False, num_decod
     if not tf_backbone:
         backbone = detr.get_layer("backbone")
     else:
+        config = config.normalized_method = "tf_resnet"
         backbone = tf.keras.applications.ResNet50(include_top=False, weights="imagenet", input_shape=(None, None, 3), name="backbone")
 
     # Transformer

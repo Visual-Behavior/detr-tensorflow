@@ -31,7 +31,7 @@ def build_model(config):
     image_input = tf.keras.Input((None, None, 3))
 
     # Load the pretrained model
-    detr = get_detr_model(include_top=False, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
+    detr = get_detr_model(config, include_top=False, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
 
     # Setup the new layers
     cls_layer = tf.keras.layers.Dense(len(CLASS_NAME))

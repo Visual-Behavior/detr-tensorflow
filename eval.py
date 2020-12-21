@@ -38,8 +38,8 @@ def eval_model(model, config, class_names, valid_dt):
         'box' : [[APDataObject() for _ in class_names] for _ in iou_thresholds],
         'mask': [[APDataObject() for _ in class_names] for _ in iou_thresholds]
     }
-
     it = 0
+
     for images, target_bbox, target_class in valid_dt:
         # Forward pass
         m_outputs = model(images)

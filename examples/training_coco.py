@@ -30,7 +30,7 @@ def build_model(config):
     """
     # Load detr model without weight. 
     # Use the tensorflow backbone with the imagenet weights
-    detr = get_detr_model(include_top=True, weights=None, tf_backbone=True)
+    detr = get_detr_model(config, include_top=True, weights=None, tf_backbone=True)
     detr.summary()
     return detr
 
@@ -44,14 +44,15 @@ def run_finetuning(config):
     train_dt = load_coco("train", config.batch_size, config, augmentation=True)
     valid_dt = load_coco("val", 1, config, augmentation=False)
 
-    # Train/finetune the transformers only
-    config.train_backbone = False
+    # Train the backbone and the transformers
+    # Check the training_config file for the other hyperparameters
+    config.train_backbone = True
     config.train_transformers = True
 
     # Setup the optimziers and the trainable variables
     optimzers = setup_optimizers(detr, config)
 
-    # Run the training for 5 epochs
+    # Run the training for 100 epochs
     for epoch_nb in range(100):
         training.eval(detr, valid_dt, config, evaluation_step=200)
         training.fit(detr, train_dt, optimzers, config, epoch_nb)

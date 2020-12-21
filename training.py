@@ -1,8 +1,10 @@
 import tensorflow as tf
 
 from optimizers import gather_gradient, aggregate_grad_and_apply
+from logger.training_logging import valid_log, train_log
 from loss.loss import get_losses
 import time
+import wandb
 
 @tf.function
 def run_train_step(model, images, t_bbox, t_class, optimizers, config):
@@ -30,7 +32,7 @@ def run_val_step(model, images, t_bbox, t_class, config):
     return m_outputs, total_loss, log
 
 
-def fit(model, train_dt, optimizers, config, epoch_nb):
+def fit(model, train_dt, optimizers, config, epoch_nb, class_name):
     """ Train the model for one epoch
     """
     # Aggregate the gradient for bigger batch and better convergence
@@ -45,7 +47,7 @@ def fit(model, train_dt, optimizers, config, epoch_nb):
         
         # Load the predictions
         if config.log:
-            train_log(images, t_bbox, t_class, m_outputs, config, config.global_step,  CLASS_NAME, prefix="train/")
+            train_log(images, t_bbox, t_class, m_outputs, config, config.global_step,  class_name, prefix="train/")
         
         # Aggregate and apply the gradient
         for name in gradient_steps:
@@ -63,7 +65,7 @@ def fit(model, train_dt, optimizers, config, epoch_nb):
         config.global_step += 1
 
 
-def eval(model, valid_dt, config, evaluation_step=200):
+def eval(model, valid_dt, config, class_name, evaluation_step=200):
     """ Evaluate the model on the validation set
     """
     t = None
@@ -72,7 +74,7 @@ def eval(model, valid_dt, config, evaluation_step=200):
         m_outputs, total_loss, log = run_val_step(model, images, t_bbox, t_class, config)
         # Log the predictions
         if config.log:
-            valid_log(images, t_bbox, t_class, m_outputs, config, val_step, config.global_step,  CLASS_NAME, evaluation_step=evaluation_step, prefix="train/")
+            valid_log(images, t_bbox, t_class, m_outputs, config, val_step, config.global_step,  class_name, evaluation_step=evaluation_step, prefix="train/")
         # Log the metrics
         if config.log and val_step == 0:
             wandb.log({f"val/{k}":log[k] for k in log}, step=config.global_step)

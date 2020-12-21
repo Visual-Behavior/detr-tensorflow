@@ -1,11 +1,6 @@
 import os
 import requests
-from google.cloud import storage
 
-#client = storage.Client()
-#bucket = client.get_bucket('visualbehavior-publicweights')
-
-#storage_client = storage.Client()
 
 WEIGHT_NAME_TO_CKPT = {
     "detr": [

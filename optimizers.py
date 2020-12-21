@@ -9,7 +9,8 @@ def disable_batchnorm_training(model):
 
 def get_transformers_trainable_variables(model, exclude=[]):
     transformers_variables = []
-    for layer in model.layers[2:]:
+    # layer [1] is the detr model including the backbone and the transformers
+    for layer in model.layers[1].layers[2:]:
         if layer.name not in exclude:
             transformers_variables += layer.trainable_variables
     return transformers_variables
@@ -17,7 +18,8 @@ def get_transformers_trainable_variables(model, exclude=[]):
 
 def get_backbone_trainable_variables(model):
     backbone_variables = []
-    for layer in model.layers[:2]:
+    # layer [1] is the detr model including the backbone and the transformers
+    for layer in model.layers[1].layers[:2]:
         backbone_variables += layer.trainable_variables
     return backbone_variables
 

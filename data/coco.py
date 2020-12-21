@@ -35,10 +35,8 @@ def get_coco_labels(coco, img_id, image_shape, augmentation):
     ann_ids = coco.getAnnIds(imgIds=img_id)
     anns = coco.loadAnns(ann_ids)
     # Setup bbox
-    bbox = np.zeros((100, 4))
-    t_class = np.zeros((100, 1))
-    # Count nb of bbox and crow bbox to filter later on
-    nb_bbox = 0
+    bbox = []
+    t_class = []
     crowd_bbox = 0
     for a, ann in enumerate(anns):
         bbox_x, bbox_y, bbox_w, bbox_h = ann['bbox'] 
@@ -54,59 +52,66 @@ def get_coco_labels(coco, img_id, image_shape, augmentation):
         bbox_w = bbox_w / float(image_shape[1])
         bbox_h = bbox_h / float(image_shape[0])
         # Add bbox and class
-        bbox[a+1] = [x_center, y_center, bbox_w, bbox_h]
-        t_class[a+1][0] = t_cls
-        nb_bbox += 1
+        bbox.append([x_center, y_center, bbox_w, bbox_h])
+        t_class.append([t_cls])
     # Set bbox header
-    bbox[0][0] = nb_bbox
     bbox = np.array(bbox)
     t_class = np.array(t_class)
     return bbox.astype(np.float32), t_class.astype(np.int32), crowd_bbox
 
 
-def tf_get_coco(coco_dir, coco, img_id, train_val, augmentation, config):
-    
-    def get_coco(coco_id):
-        # Load imag
-        img = coco.loadImgs([coco_id])[0]
-        # Load image
-        data_type = "train2017" if train_val == "train" else "val2017"
-        filne_name = img['file_name']
-        image_path = f"{coco_dir}/{data_type}/{filne_name}"
-        image = imageio.imread(image_path)
-        # Graycale to RGB if needed
-        if len(image.shape) == 2: image = gray2rgb(image)
-        # Retrieve the image label
-        t_bbox, t_class, is_crowd = get_coco_labels(coco, img['id'], image.shape, augmentation)
-        # Apply augmentations
+def get_coco_from_id(coco_id, coco_dir, coco, train_val, augmentation, config):
+    # Load imag
+    img = coco.loadImgs([coco_id])[0]
+    # Load image
+    data_type = "train2017" if train_val == "train" else "val2017"
+    filne_name = img['file_name']
+    image_path = f"{coco_dir}/{data_type}/{filne_name}"
+    image = imageio.imread(image_path)
+    # Graycale to RGB if needed
+    if len(image.shape) == 2: image = gray2rgb(image)
+    # Retrieve the image label
+    t_bbox, t_class, is_crowd = get_coco_labels(coco, img['id'], image.shape, augmentation)
+    # Apply augmentations
+    if len(t_bbox) > 0 and augmentation is not None:
         image, t_bbox, t_class = detr_aug(image, t_bbox,  t_class, augmentation)
-        # Normalized images
-        image = processing.normalized_images(image, config)
-        # Set type for tensorflow        
-        image = image.astype(np.float32)
-        t_bbox = t_bbox.astype(np.float32)
-        t_class = t_class.astype(np.int64)
-        return image, t_bbox, t_class, is_crowd
-
-    return tf.numpy_function(get_coco,  [img_id], (tf.float32, tf.float32, tf.int64, tf.int64))
+    # Normalized images
+    image = processing.normalized_images(image, config)
+    # Set type for tensorflow        
+    image = image.astype(np.float32)
+    t_bbox = t_bbox.astype(np.float32)
+    t_class = t_class.astype(np.int64)
+    return image, t_bbox, t_class, is_crowd
 
 
-def load_coco(coco_dir, train_val, batch_size, config, augmentation=False):
+def load_coco(train_val, batch_size, config, augmentation=False):
     """
     """
+    # Set the coco background class on the config
+    config.background_class = 91
+
     # Open annotation file and setup the coco object
     data_type = "train2017" if train_val == "train" else "val2017"
-    ann_file = f"{coco_dir}/annotations/instances_{data_type}.json"
+    ann_file = f"{config.datadir}/annotations/instances_{data_type}.json"
     coco = COCO(ann_file)
 
     # Setup the data pipeline
     img_ids = coco.getImgIds()
     shuffle(img_ids)
     dataset = tf.data.Dataset.from_tensor_slices(img_ids)
+    # Shuffle the dataset
     dataset = dataset.shuffle(1000)
-    dataset = dataset.map(lambda img_id: tf_get_coco(coco_dir, coco, img_id, train_val, augmentation, config), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.filter(lambda imgs, tbbox, tclass, iscrowd: tbbox[0][0] > 0 and iscrowd != 1)
+    # Retrieve img and labels
+    outputs_types=(tf.float32, tf.float32, tf.int64, tf.int64)
+    dataset = dataset.map(lambda idx: processing.numpy_fc(
+        idx, get_coco_from_id, outputs_types=outputs_types, coco_dir=config.datadir, coco=coco, train_val=train_val, augmentation=augmentation, config=config)
+    , num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.filter(lambda imgs, tbbox, tclass, iscrowd: tf.shape(tbbox)[0] > 0 and iscrowd != 1)
     dataset = dataset.map(lambda imgs, tbbox, tclass, iscrowd: (imgs, tbbox, tclass), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
+    # Pad bbox and labels
+    dataset = dataset.map(processing.pad_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    
     dataset = dataset.batch(batch_size, drop_remainder=True)
     dataset = dataset.prefetch(32)
     return dataset

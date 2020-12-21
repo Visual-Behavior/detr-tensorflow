@@ -7,23 +7,11 @@ from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 import tensorflow as tf
-# > 2.3
-if int(tf.__version__.split('.')[1]) > 3:
-    RAGGED = True
-else:
-    RAGGED = False
-
 
 def bbox_xcyc_wh_to_imgaug_bbox(bbox, target_class, height, width):
-    nb_bbox = bbox[0][0]
 
     img_aug_bbox = []
     
-    if not RAGGED:
-        nb_bbox = int(bbox[0][0])
-        bbox = bbox[1:nb_bbox+1]
-        target_class = target_class[1:nb_bbox+1]
-
     for b in range(0, len(bbox)):
         bbox_xcyc_wh = bbox[b]
         # Convert size form 0.1 to height/width
@@ -131,12 +119,8 @@ def detr_aug_seq(image, augmenation):
 
 def imgaug_bbox_to_xcyc_wh(bbs_aug, height, width):
 
-    if RAGGED:
-        bbox_xcyc_wh = []
-        t_class = []
-    else:
-        bbox_xcyc_wh = np.zeros((100, 4))
-        t_class = np.zeros((100, 1))
+    bbox_xcyc_wh = []
+    t_class = []
 
     nb_bbox = 0
 
@@ -149,16 +133,12 @@ def imgaug_bbox_to_xcyc_wh(bbs_aug, height, width):
  
         assert bbox.label != None
 
-        if RAGGED:
-            bbox_xcyc_wh.append([xc / width, yc / height, w / width, h / height])
-            t_class.append(bbox.label)
-        else:
-            bbox_xcyc_wh[b+1] = [xc / width, yc / height, w / width, h / height]
-            t_class[b+1] = [bbox.label]
-        
+        bbox_xcyc_wh.append([xc / width, yc / height, w / width, h / height])
+        t_class.append(bbox.label)
+
         nb_bbox += 1
 
-    bbox_xcyc_wh[0][0] = nb_bbox
+    #bbox_xcyc_wh[0][0] = nb_bbox
     bbox_xcyc_wh = np.array(bbox_xcyc_wh)
 
     return bbox_xcyc_wh, t_class
@@ -175,6 +155,9 @@ def retrieve_outputs(augmented_images, augmented_bbox):
     augmented_bbox = augmented_bbox[0]
 
     bbox, t_class = imgaug_bbox_to_xcyc_wh(augmented_bbox, image.shape[0], image.shape[1])
+
+    bbox = np.array(bbox)
+    t_class = np.array(t_class)
 
     return image, bbox, t_class
 

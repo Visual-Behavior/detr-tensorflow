@@ -166,7 +166,6 @@ def hungarian_matching(t_bbox, t_class, p_bbox, p_class, fcost_class=1, fcost_bb
         size = tf.cast(t_bbox[0][0], tf.int32)
         t_bbox = tf.slice(t_bbox, [1, 0], [size, 4])
         t_class = tf.slice(t_class, [1, 0], [size, -1])
-        #t_class = tf.argmax(t_class, axis=-1)
         t_class = tf.squeeze(t_class, axis=-1)
 
     # Convert frpm [xc, yc, w, h] to [xmin, ymin, xmax, ymax]

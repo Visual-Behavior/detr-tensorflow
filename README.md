@@ -113,6 +113,15 @@ python finetune_voc.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_s
 python train_coco.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_size 8  --target_batch 32 --log
 ```
 
+
+## Inference
+
+Here is an exmaple to run inference with the webcam on your webcam
+
+```
+python webcam_inference.py 
+```
+
 ## Acknowledgement
 
 The pretrained weights of this models are originaly provide from the Facebook repository https://github.com/facebookresearch/detr and made avaiable in tensorflow in this repository: https://github.com/Leonardo-Blanger/detr_tensorflow

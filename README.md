@@ -131,6 +131,9 @@ Here is an example of running an inference with the model on your webcam.
 python webcam_inference.py 
 ```
 
+<img src="images/webcam_detr.png"></img>
+
+
 ## Acknowledgement
 
 The pretrained weights of this models are originaly provide from the Facebook repository https://github.com/facebookresearch/detr and made avaiable in tensorflow in this repository: https://github.com/Leonardo-Blanger/detr_tensorflow

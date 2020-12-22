@@ -47,7 +47,7 @@ def build_model(config):
 
     # Define the main outputs along with the auxialiary loss
     outputs = {'pred_logits': cls_preds[-1], 'pred_boxes': pos_preds[-1]}
-    outputs["aux"] = [ {"pred_logits": cls_preds[i], "pred_boxes": pos_preds[i]} for i in range(1, 6)]
+    outputs["aux"] = [ {"pred_logits": cls_preds[i], "pred_boxes": pos_preds[i]} for i in range(1, 5)]
 
     detr = tf.keras.Model(image_input, outputs, name="detr_finetuning")
     detr.summary()
@@ -72,14 +72,14 @@ def run_finetuning(config):
 
     # Run the training for 5 epochs
     for epoch_nb in range(5):
-        training.eval(detr, valid_dt, config, evaluation_step=200)
-        training.fit(detr, train_dt, optimzers, config, epoch_nb)
+        training.eval(detr, valid_dt, config, CLASS_NAME, evaluation_step=200)
+        training.fit(detr, train_dt, optimzers, config, epoch_nb, CLASS_NAME)
 
 
 if __name__ == "__main__":
 
-    physical_devices = tf.config.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    #physical_devices = tf.config.list_physical_devices('GPU')
+    #tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     config = TrainingConfig()
     args = training_config_parser().parse_args()

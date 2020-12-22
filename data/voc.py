@@ -71,6 +71,8 @@ def load_voc_from_id(img_id, voc_dir, augmentation, config):
     image = image.astype(np.float32)
     t_bbox = t_bbox.astype(np.float32)
     t_class = t_class.astype(np.int64)
+
+
     return (image, t_bbox, t_class)
 
 
@@ -93,10 +95,10 @@ def load_voc(train_val, batch_size, config, augmentation=False):
     dataset = dataset.shuffle(1000)
     # Retrieve img and labels
     dataset = dataset.map(lambda idx: processing.numpy_fc(idx, load_voc_from_id, voc_dir=config.datadir, augmentation=augmentation, config=config), num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # Filter labels to be sure to keep only sample with at least one bbox  
+    dataset = dataset.filter(lambda imgs, tbbox, tclass: tf.shape(tbbox)[0] > 0)
     # Pad bbox and labels
     dataset = dataset.map(processing.pad_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    # Filter labels to be sure to keep only sample with at least one bbox  
-    dataset = dataset.filter(lambda imgs, tbbox, tclass: tbbox[0][0] > 0)
     # Batch images
     dataset = dataset.batch(batch_size, drop_remainder=True)
     # Prefetch

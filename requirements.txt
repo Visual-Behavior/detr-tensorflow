@@ -1,0 +1,6 @@
+wandb
+matplotlib
+numpy
+pycocotools
+scikit-image
+imageio

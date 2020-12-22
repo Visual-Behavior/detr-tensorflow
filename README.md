@@ -31,6 +31,19 @@ Additionally, our logging system is based on https://www.wandb.com/ so you can g
 - DETR-DC5-R101
 
 
+## Install
+
+The code is currently tested with tensorflow 2.3.0 and python 3.7. The following dependencies are required
+
+```
+wandb
+matplotlib
+numpy
+pycocotools
+scikit-image
+imageio
+```
+
 ## Evaluation :
 
 Run the following to evaluate the model using the pretrained weights:
@@ -65,12 +78,12 @@ image_input = tf.keras.Input((None, None, 3))
 detr = get_detr_model(config, include_top=False, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
 
 # Setup the new layers
-cls_layer = tf.keras.layers.Dense(len(CLASS_NAME))
+cls_layer = tf.keras.layers.Dense(len(CLASS_NAME), name="cls_layer")
 pos_layer = tf.keras.models.Sequential([
     tf.keras.layers.Dense(256, activation="relu"),
     tf.keras.layers.Dense(256, activation="relu"),
     tf.keras.layers.Dense(4, activation="sigmoid"),
-])
+], name="pos_layer")
 
 transformer_output = detr(image_input)
 cls_preds = cls_layer(transformer_output)
@@ -78,13 +91,14 @@ pos_preds = pos_layer(transformer_output)
 
 # Define the main outputs along with the auxialiary loss
 outputs = {'pred_logits': cls_preds[-1], 'pred_boxes': pos_preds[-1]}
-outputs["aux"] = [ {"pred_logits": cls_preds[i], "pred_boxes": pos_preds[i]} for i in range(1, 5)]
+outputs["aux"] = [ {"pred_logits": cls_preds[i], "pred_boxes": pos_preds[i]} for i in range(0, 5)]
 
 detr = tf.keras.Model(image_input, outputs, name="detr_finetuning")
 detr.summary()
+return detr
 ```
 
-The following script gives an example to finetune the model on a new dataset (VOC) with a real batch size of 8 and a virtual batch size (gradient aggregate) of 32.
+The following script gives an example to finetune the model on a new dataset (VOC) with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used to log the training into wandb. 
 
 
 ```

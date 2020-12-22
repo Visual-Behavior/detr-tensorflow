@@ -172,7 +172,7 @@ def get_detr_model(config, include_top=False, weights=None, tf_backbone=False, n
                 'pred_boxes': outputs_coord[-1]}
 
     output["aux"] = []
-    for i in range(0, num_decoder_layers - 2):
+    for i in range(0, num_decoder_layers - 1):
         out_class = outputs_class[i]
         pred_boxes = outputs_coord[i]
         output["aux"].append({

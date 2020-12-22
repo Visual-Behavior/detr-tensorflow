@@ -51,8 +51,8 @@ def run_finetuning(config):
 
     # Run the training for 5 epochs
     for epoch_nb in range(100):
-        training.eval(detr, valid_dt, config, evaluation_step=200)
-        training.fit(detr, train_dt, optimzers, config, epoch_nb)
+        training.eval(detr, valid_dt, config, CLASS_NAME, evaluation_step=200)
+        training.fit(detr, train_dt, optimzers, config, epoch_nb, CLASS_NAME)
 
 
 if __name__ == "__main__":

@@ -9,10 +9,16 @@ def disable_batchnorm_training(model):
 
 def get_transformers_trainable_variables(model, exclude=[]):
     transformers_variables = []
-    # layer [1] is the detr model including the backbone and the transformers
-    for layer in model.layers[1].layers[2:]:
+
+    # Transformers variables
+    transformers_variables = model.get_layer("detr").get_layer("transformer").trainable_variables
+
+    for layer in model.layers[2:]:
         if layer.name not in exclude:
             transformers_variables += layer.trainable_variables
+        else:
+            print('tr variables do not include', layer.name)
+
     return transformers_variables
 
 
@@ -21,6 +27,7 @@ def get_backbone_trainable_variables(model):
     # layer [1] is the detr model including the backbone and the transformers
     for layer in model.layers[1].layers[:2]:
         backbone_variables += layer.trainable_variables
+
     return backbone_variables
 
 
@@ -41,12 +48,12 @@ def get_trainable_variables(model, config):
 
 
     # Retrieve the gradient ofr each trainable variables
-    if config.train_backbone:
-        backbone_variables = get_backbone_trainable_variables(model)
-    if config.train_transformers:
-        transformers_variables = get_transformers_trainable_variables(model, exclude=[])
-    if config.train_nlayers:
-        nlayers_variables = get_nlayers_trainables_variables(model, [])
+    #if config.train_backbone:
+    backbone_variables = get_backbone_trainable_variables(model)
+    #if config.train_transformers:
+    transformers_variables = get_transformers_trainable_variables(model, exclude=config.nlayers)
+    #if config.train_nlayers:
+    nlayers_variables = get_nlayers_trainables_variables(model, config.nlayers)
 
     
     return backbone_variables, transformers_variables, nlayers_variables
@@ -79,12 +86,9 @@ def setup_optimizers(model, config):
 
     backbone_variables, transformers_variables, nlayers_variables = [], [], []
 
-    if config.train_backbone:
-        backbone_variables = get_backbone_trainable_variables(model)
-    if config.train_transformers:
-        transformers_variables = get_transformers_trainable_variables(model, exclude=[])
-    if config.train_nlayers:
-        nlayers_variables = get_nlayers_trainables_variables(model, [])
+    backbone_variables = get_backbone_trainable_variables(model)
+    transformers_variables = get_transformers_trainable_variables(model, exclude=config.nlayers)
+    nlayers_variables = get_nlayers_trainables_variables(model, config.nlayers)
 
 
     return {
@@ -111,16 +115,16 @@ def gather_gradient(model, optimizers, total_loss, tape, config, log):
     nlayers_gradients = gradients[len(optimizers["backbone_variables"])+len(optimizers["transformers_variables"]):]
 
     gradient_steps = {}
-    if config.train_backbone:
-        gradient_steps["backbone"] = {"gradients": backbone_gradients}
-        log.update({"backbone_lr": optimizers["backbone_optimizer"]._serialize_hyperparameter("learning_rate")})
-    if config.train_transformers:
-        gradient_steps["transformers"] = {"gradients": transformers_gradients}
-        log.update({"transformers_lr": optimizers["transformers_optimizer"]._serialize_hyperparameter("learning_rate")})
-    if config.train_nlayers:
-        gradient_steps["nlayers"] = {"gradients": nlayers_gradients}
-        log.update({"nlayers_lr": optimizers["nlayers_optimizer"]._serialize_hyperparameter("learning_rate")})
+
+    gradient_steps["backbone"] = {"gradients": backbone_gradients}
+    gradient_steps["transformers"] = {"gradients": transformers_gradients}
+    gradient_steps["nlayers"] = {"gradients": nlayers_gradients}
+
     
+    log.update({"backbone_lr": optimizers["backbone_optimizer"]._serialize_hyperparameter("learning_rate")})
+    log.update({"transformers_lr": optimizers["transformers_optimizer"]._serialize_hyperparameter("learning_rate")})
+    log.update({"nlayers_lr": optimizers["nlayers_optimizer"]._serialize_hyperparameter("learning_rate")})
+
     return gradient_steps
 
 

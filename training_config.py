@@ -59,18 +59,21 @@ class TrainingConfig():
         self.backbone_lr = tf.Variable(1e-5)
         self.transformers_lr = tf.Variable(1e-4)
         self.nlayers_lr = tf.Variable(1e-4)
+        self.nlayers = []
 
         # Training progress
         self.global_step = 0
         self.log = False
 
         # Pipeline variables
-        self.normalized_method ="torch_resnet"
+        self.normalized_method = "torch_resnet"
     
     
-    def add_new_layers():
+    def add_nlayers(self, layers):
         """ Set the new layers to train on the training config
         """
+        self.nlayers = [l.name for l in layers]
+
 
     def update_from_args(self, args):
         """ Update the training config from args

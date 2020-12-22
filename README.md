@@ -25,6 +25,7 @@ Additionally, our logging system is based on https://www.wandb.com/ so you can g
 - Jupyter notebbok guide to setup your dataset ⌛
 - Multi-GPU Training ⌛
 - Training with weight decay ⌛
+- Transformer attention head logging into wandb
 - DETR-DC5
 - DETR-R101
 - DETR-DC5-R101
@@ -83,19 +84,19 @@ detr = tf.keras.Model(image_input, outputs, name="detr_finetuning")
 detr.summary()
 ```
 
-The following script gives an example to finetune the model on a new dataset (voc) with batch_size 8.
+The following script gives an example to finetune the model on a new dataset (VOC) with a real batch size of 8 and a virtual batch size (gradient aggregate) of 32.
 
 
 ```
-python finetune_voc.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_size 8 --log
+python finetune_voc.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_size 8 --target_batch 32  --log
 ```
 
 ## Training on COCO
 
-(Multi GPU training is comming soon)
+(Multi GPU training comming soon)
 
 ```
-python train_coco.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_size 8 --log
+python train_coco.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_size 8  --target_batch 32 --log
 ```
 
 ## Acknowledgement

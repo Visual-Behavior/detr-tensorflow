@@ -44,6 +44,11 @@ scikit-image
 imageio
 ```
 
+```
+pip install -r requirements.txt
+```
+
+
 ## Evaluation :
 
 Run the following to evaluate the model using the pretrained weights:

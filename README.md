@@ -131,7 +131,7 @@ Here is an example of running an inference with the model on your webcam.
 python webcam_inference.py 
 ```
 
-<img src="images/webcam_detr.png"></img>
+<img src="images/webcam_detr.png" width="400"></img>
 
 
 ## Acknowledgement

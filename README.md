@@ -55,7 +55,7 @@ The result is not the same as reported in the paper because the evaluation is ru
 
 ## Finetune on your dataset
 
-To finetune the modle on a new dataset, we must get ride of the last layers that predicts bbox class and positions.
+To finetune the model on a new dataset, we must get ride of the last layers that predicts bbox class and positions.
 
 ```python
 # Input

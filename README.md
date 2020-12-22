@@ -1,6 +1,6 @@
 # DETR : End-to-End Object Detection with Transformers (Tensorflow)
 
-Tensorflow implementation of DETR : Object Detection with Transformers including code for inference, training, and finetuning. DETR is a promising model that brings widely adopted transformers to vision models. We believe that models based on convolution and transformers will soon become the default choice for most practitioners because of the simplicity of the training procedure: NMS and anchors free! Therefore this repository is a step toward making this type of architecture widely avaiable. 
+Tensorflow implementation of DETR : Object Detection with Transformers, including code for inference, training, and finetuning. DETR is a promising model that brings widely adopted transformers to vision models. We believe that models based on convolution and transformers will soon become the default choice for most practitioners because of the simplicity of the training procedure: NMS and anchors free! Therefore this repository is a step toward making this type of architecture widely available. 
 
 
 <b>About this implementation:</b> https://arxiv.org/pdf/2005.12872.pdf <br>
@@ -8,9 +8,12 @@ Tensorflow implementation of DETR : Object Detection with Transformers including
 
 <img src="images/detr-figure.png"></img>
 
-<b>About this implementation:</b> This repository includes codes to run an inference with the original model's weights (based on the PyTorch weights), to train the model from scratch (multi-GPU training support coming soon) as well as examples to finetune the model on your own dataset. Currently, unlike the PyTorch implementation, the training use fixed image sizes and a standard Adam optimizer with gradient norm.
+<b>About this implementation:</b> This repository includes codes to run an inference with the original model's weights (based on the PyTorch weights), to train the model from scratch (multi-GPU training support coming soon) as well as examples to finetune the model on your dataset. Unlike the PyTorch implementation, the training uses fixed image sizes and a standard Adam optimizer with gradient norm clipping.
 
-Additionally, our logging system is based on https://www.wandb.com/ so you can get a nice visualization of your model performance!
+Additionally, our logging system is based on https://www.wandb.com/ so that you can get a great visualization of your model performance!
+
+
+<img src="images/wandb_logging.png"></img>
 
 
 ## Current and upcoming features
@@ -33,7 +36,8 @@ Additionally, our logging system is based on https://www.wandb.com/ so you can g
 
 ## Install
 
-The code is currently tested with tensorflow 2.3.0 and python 3.7. The following dependencies are required
+The code has been currently tested with Tensorflow 2.3.0 and python 3.7. The following dependencies are required.
+
 
 ```
 wandb
@@ -51,7 +55,7 @@ pip install -r requirements.txt
 
 ## Evaluation :
 
-Run the following to evaluate the model using the pretrained weights:
+Run the following to evaluate the model using the pre-trained weights:
 
 
 ```
@@ -68,12 +72,12 @@ Outputs:
 
 ```
 
-The result is not the same as reported in the paper because the evaluation is run on the <b>original image size</b> and not on the larger images. The original implementation resizes the images so that the shorter side is at least 800pixels and the longer side at most 1333.
+The result is not the same as reported in the paper because the evaluation is run on the <b>original image size</b> and not on the larger images. The actual implementation resizes the image so that the shorter side is at least 800pixels and the longer side at most 1333.
 
 
 ## Finetune on your dataset
 
-To finetune the model on a new dataset, we must get ride of the last layers that predicts bbox class and positions.
+To fine-tune the model on a new dataset, we must remove the last layers that predict the box class and positions.
 
 ```python
 # Input
@@ -103,11 +107,11 @@ detr.summary()
 return detr
 ```
 
-The following script gives an example to finetune the model on a new dataset (VOC) with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used to log the training into wandb. 
+The following script gives an example to finetune the model on a new dataset (VOC) with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used for logging the training into wandb. 
 
 
 ```
-python finetune_voc.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_size 8 --target_batch 32  --log
+python finetune_voc.py --datadir /path/to/VOCdevkit/VOC2012 --batch_size 8 --target_batch 32  --log
 ```
 
 ## Training on COCO
@@ -115,13 +119,13 @@ python finetune_voc.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_s
 (Multi GPU training comming soon)
 
 ```
-python train_coco.py --datadir /home/thibault/data/VOCdevkit/VOC2012 --batch_size 8  --target_batch 32 --log
+python train_coco.py --datadir /path/to/COCO --batch_size 8  --target_batch 32 --log
 ```
 
 
 ## Inference
 
-Here is an exmaple to run inference with the webcam on your webcam
+Here is an example of running an inference with the model on your webcam.
 
 ```
 python webcam_inference.py 

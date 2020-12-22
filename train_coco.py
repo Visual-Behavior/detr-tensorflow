@@ -54,14 +54,14 @@ def run_finetuning(config):
 
     # Run the training for 100 epochs
     for epoch_nb in range(100):
-        training.eval(detr, valid_dt, config, evaluation_step=200)
-        training.fit(detr, train_dt, optimzers, config, epoch_nb)
+        training.eval(detr, valid_dt, config, CLASS_NAME, evaluation_step=200)
+        training.fit(detr, train_dt, optimzers, config, epoch_nb, CLASS_NAME)
 
 
 if __name__ == "__main__":
 
-    physical_devices = tf.config.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    #physical_devices = tf.config.list_physical_devices('GPU')
+    #tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     config = TrainingConfig()
     args = training_config_parser().parse_args()

@@ -17,7 +17,7 @@ def get_transformers_trainable_variables(model, exclude=[]):
         if layer.name not in exclude:
             transformers_variables += layer.trainable_variables
         else:
-            print('tr variables do not include', layer.name)
+            pass
 
     return transformers_variables
 
@@ -25,8 +25,13 @@ def get_transformers_trainable_variables(model, exclude=[]):
 def get_backbone_trainable_variables(model):
     backbone_variables = []
     # layer [1] is the detr model including the backbone and the transformers
-    for layer in model.layers[1].layers[:2]:
-        backbone_variables += layer.trainable_variables
+
+    detr = model.get_layer("detr")
+    tr_index = [l.name for l in detr.layers].index('transformer')
+
+    for l, layer in enumerate(detr.layers):
+        if l != tr_index:
+            backbone_variables += layer.trainable_variables
 
     return backbone_variables
 

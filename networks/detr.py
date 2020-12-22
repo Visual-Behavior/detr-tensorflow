@@ -120,8 +120,8 @@ def get_detr_model(config, include_top=False, weights=None, tf_backbone=False, n
     if not tf_backbone:
         backbone = detr.get_layer("backbone")
     else:
-        config = config.normalized_method = "tf_resnet"
-        backbone = tf.keras.applications.ResNet50(include_top=False, weights="imagenet", input_shape=(None, None, 3), name="backbone")
+        config.normalized_method = "tf_resnet"
+        backbone = tf.keras.applications.ResNet50(include_top=False, weights="imagenet", input_shape=(None, None, 3))
 
     # Transformer
     transformer = detr.get_layer("transformer")

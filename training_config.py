@@ -8,7 +8,7 @@ def training_config_parser():
     parser = argparse.ArgumentParser()
 
     # Dataset info
-    parser.add_argument("--datadir",  type=str, required=True, help="/path/to/voc")
+    parser.add_argument("--datadir",  type=str, required=False, help="/path/to/voc")
     parser.add_argument("--background_class",  type=int, required=False, default=0, help="Default background class")
 
     # What to train

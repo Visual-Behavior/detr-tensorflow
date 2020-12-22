@@ -70,6 +70,8 @@ def get_model_inference(m_outputs: dict, background_class, bbox_format="xy_cente
     softmax = tf.nn.softmax(predicted_labels)
     predicted_scores = tf.reduce_max(softmax, axis=-1)
     predicted_labels = tf.argmax(softmax, axis=-1)
+
+
     indices = tf.where(predicted_labels != background_class)
     indices = tf.squeeze(indices, axis=-1)
 

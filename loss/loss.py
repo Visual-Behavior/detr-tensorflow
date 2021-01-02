@@ -2,13 +2,6 @@ import tensorflow as tf
 import bbox
 from loss.hungarian_matching import hungarian_matching
 
-# > 2.3.x
-if int(tf.__version__.split('.')[1]) >= 4:
-    RAGGED = True
-else:
-    RAGGED = False
-
-
 
 def get_total_losss(losses):
     """
@@ -122,17 +115,7 @@ def get_detr_losses(m_outputs, target_bbox, target_label, config, suffix=""):
     for b in range(predicted_bbox.shape[0]):
 
         p_bbox, p_class, t_bbox, t_class = predicted_bbox[b], predicted_label[b], target_bbox[b], target_label[b]
-
-        slice_preds = True
-        if RAGGED:
-            # Ragged tensor to tensor
-            t_bbox = t_bbox.to_tensor()
-            t_class = t_class.to_tensor()
-            slice_preds = False
-            t_class = tf.squeeze(t_class, axis=-1)
-
-
-        t_indices, p_indices, t_selector, p_selector, t_bbox, t_class = hungarian_matching(t_bbox, t_class, p_bbox, p_class, slice_preds=slice_preds)
+        t_indices, p_indices, t_selector, p_selector, t_bbox, t_class = hungarian_matching(t_bbox, t_class, p_bbox, p_class, slice_preds=True)
 
         t_indices = t_indices + tf.cast(t_offset, tf.int64)
         p_indices = p_indices + tf.cast(p_offset, tf.int64)

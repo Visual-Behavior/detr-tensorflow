@@ -3,7 +3,7 @@ from itertools import product
 import tensorflow as tf
 import numpy as np
 
-import bbox
+from .. import bbox
 from scipy.optimize import linear_sum_assignment
 
 

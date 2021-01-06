@@ -1,5 +1,9 @@
-""" Example on how to finetune on the VOC dataset
-using custom layers.
+""" Example on how to finetune on the HardHat dataset
+using custom layers. This script assume the dataset is already download 
+on your computer in raw and Tensorflow Object detection csv format. 
+
+Please, for more information, checkout the following notebooks:
+    - DETR : How to setup a custom dataset
 """
 
 import argparse
@@ -7,44 +11,29 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 import time
-import wandb
 import os
 
-from detr_tf.data import load_voc_dataset, VOC_CLASS_NAME
+from detr_tf.data import load_tfcsv_dataset
+
 from detr_tf.networks.detr import get_detr_model
 from detr_tf.optimizers import setup_optimizers
+from detr_tf.logger.training_logging import train_log, valid_log
+from detr_tf.loss.loss import get_losses
+from detr_tf.inference import numpy_bbox_to_image
 from detr_tf.training_config import TrainingConfig, training_config_parser
 from detr_tf import training
 
+import wandb
+import time
+
+CLASS_NAME = ['background', 'head', 'helmet', 'person']
 
 def build_model(config):
     """ Build the model with the pretrained weights
     and add new layers to finetune
     """
-    # Input
-    image_input = tf.keras.Input((None, None, 3))
-
-    # Load the pretrained model
-    detr = get_detr_model(config, include_top=False, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
-
-    # Setup the new layers
-    cls_layer = tf.keras.layers.Dense(len(VOC_CLASS_NAME), name="cls_layer")
-    pos_layer = tf.keras.models.Sequential([
-        tf.keras.layers.Dense(256, activation="relu"),
-        tf.keras.layers.Dense(256, activation="relu"),
-        tf.keras.layers.Dense(4, activation="sigmoid"),
-    ], name="pos_layer")
-    config.add_nlayers([cls_layer, pos_layer])
-
-    transformer_output = detr(image_input)
-    cls_preds = cls_layer(transformer_output)
-    pos_preds = pos_layer(transformer_output)
-
-    # Define the main outputs along with the auxialiary loss
-    outputs = {'pred_logits': cls_preds[-1], 'pred_boxes': pos_preds[-1]}
-    outputs["aux"] = [ {"pred_logits": cls_preds[i], "pred_boxes": pos_preds[i]} for i in range(0, 5)]
-
-    detr = tf.keras.Model(image_input, outputs, name="detr_finetuning")
+    # Load the pretrained model with new heads at the top
+    detr = get_detr_model(config, include_top=False, nb_class=len(CLASS_NAME), weights="detr", num_decoder_layers=6, num_encoder_layers=6)
     detr.summary()
     return detr
 
@@ -55,8 +44,8 @@ def run_finetuning(config):
     detr = build_model(config)
 
     # Load the training and validation dataset
-    train_dt = load_voc_dataset("train", VOC_CLASS_NAME, config.batch_size, config, augmentation=True)
-    valid_dt = load_voc_dataset("val", VOC_CLASS_NAME, 1, config, augmentation=False)
+    train_dt = load_tfcsv_dataset("train", config.batch_size, config, augmentation=True)
+    valid_dt = load_tfcsv_dataset("test", 1, config, augmentation=False)
 
     # Train/finetune the transformers only
     config.train_backbone = tf.Variable(False)
@@ -81,8 +70,8 @@ def run_finetuning(config):
             config.transformers_lr.assign(1e-4)
             config.nlayers_lr.assign(1e-3)
 
-        training.eval(detr, valid_dt, config, VOC_CLASS_NAME, evaluation_step=200)
-        training.fit(detr, train_dt, optimzers, config, epoch_nb, VOC_CLASS_NAME)
+        training.eval(detr, valid_dt, config, CLASS_NAME, evaluation_step=200)
+        training.fit(detr, train_dt, optimzers, config, epoch_nb, CLASS_NAME)
 
 
 if __name__ == "__main__":

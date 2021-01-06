@@ -1,7 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras.layers import ZeroPadding2D, Conv2D, ReLU, MaxPool2D
 
-from networks.custom_layers import FrozenBatchNorm2D
+from .custom_layers import FrozenBatchNorm2D
 
 
 class ResNetBase(tf.keras.Model):

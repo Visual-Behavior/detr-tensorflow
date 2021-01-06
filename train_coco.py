@@ -9,15 +9,15 @@ import numpy as np
 import time
 import os
 
-from data.coco import load_coco, CLASS_NAME
-from networks.detr import get_detr_model
-from optimizers import setup_optimizers
-from optimizers import gather_gradient, aggregate_grad_and_apply
-from logger.training_logging import train_log, valid_log
-from loss.loss import get_losses
-from inference import numpy_bbox_to_image
-from training_config import TrainingConfig, training_config_parser
-import training
+from detr_tf.data.coco import load_coco_dataset, COCO_CLASS_NAME
+from detr_tf.networks.detr import get_detr_model
+from detr_tf.optimizers import setup_optimizers
+from detr_tf.optimizers import gather_gradient, aggregate_grad_and_apply
+from detr_tf.logger.training_logging import train_log, valid_log
+from detr_tf.loss.loss import get_losses
+from detr_tf.inference import numpy_bbox_to_image
+from detr_tf.training_config import TrainingConfig, training_config_parser
+from detr_tf import training
 
 import wandb
 import time
@@ -41,8 +41,8 @@ def run_finetuning(config):
     detr = build_model(config)
 
     # Load the training and validation dataset
-    train_dt = load_coco("train", config.batch_size, config, augmentation=True)
-    valid_dt = load_coco("val", 1, config, augmentation=False)
+    train_dt = load_coco_dataset("train", config.batch_size, config, augmentation=True)
+    valid_dt = load_coco_dataset("val", 1, config, augmentation=False)
 
     # Train the backbone and the transformers
     # Check the training_config file for the other hyperparameters
@@ -54,14 +54,15 @@ def run_finetuning(config):
 
     # Run the training for 100 epochs
     for epoch_nb in range(100):
-        training.eval(detr, valid_dt, config, CLASS_NAME, evaluation_step=200)
-        training.fit(detr, train_dt, optimzers, config, epoch_nb, CLASS_NAME)
+        training.eval(detr, valid_dt, config, COCO_CLASS_NAME, evaluation_step=200)
+        training.fit(detr, train_dt, optimzers, config, epoch_nb, COCO_CLASS_NAME)
 
 
 if __name__ == "__main__":
 
-    #physical_devices = tf.config.list_physical_devices('GPU')
-    #tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    physical_devices = tf.config.list_physical_devices('GPU')
+    if len(physical_devices) == 1:
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     config = TrainingConfig()
     args = training_config_parser().parse_args()

@@ -3,11 +3,11 @@ import numpy as np
 import cv2
 
 
-from training_config import TrainingConfig, training_config_parser
-from networks.detr import get_detr_model
-from data import processing
-from data.coco import CLASS_NAME
-from inference import get_model_inference, numpy_bbox_to_image
+from detr_tf.training_config import TrainingConfig, training_config_parser
+from detr_tf.networks.detr import get_detr_model
+from detr_tf.data import processing
+from detr_tf.data.coco import COCO_CLASS_NAME
+from detr_tf.inference import get_model_inference, numpy_bbox_to_image
 
 
 @tf.function
@@ -33,7 +33,7 @@ def run_webcam_inference(detr):
 
         frame = frame.astype(np.float32)
         frame = frame / 255
-        frame = numpy_bbox_to_image(frame, predicted_bbox, labels=predicted_labels, scores=predicted_scores, class_name=CLASS_NAME)
+        frame = numpy_bbox_to_image(frame, predicted_bbox, labels=predicted_labels, scores=predicted_scores, class_name=COCO_CLASS_NAME)
 
         cv2.imshow('frame', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):

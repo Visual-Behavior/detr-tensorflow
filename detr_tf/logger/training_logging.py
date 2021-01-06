@@ -5,15 +5,15 @@
 from typing import Union,Dict,Tuple
 import tensorflow as tf
 
-from loss.compute_map import cal_map, calc_map, APDataObject
-from logger.wandb_logging import WandbSender
-from inference import get_model_inference
+from ..loss.compute_map import cal_map, calc_map, APDataObject
+from .wandb_logging import WandbSender
+from ..inference import get_model_inference
 
 
 import numpy as np
 import cv2
 
-import bbox
+from ..import bbox
 
 if int(tf.__version__.split('.')[1]) >= 4:
     RAGGED = True

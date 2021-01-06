@@ -7,7 +7,7 @@ import numpy as np
 import wandb
 import cv2
 
-from loss.compute_map import cal_map, calc_map, APDataObject
+from ..loss.compute_map import cal_map, calc_map, APDataObject
 
 class WandbSender(object):
     """

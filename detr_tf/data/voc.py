@@ -7,11 +7,11 @@ import numpy as np
 import os
 
 
-from data import processing
-from data.augmentation import detr_aug
+from . import processing
+from . import transformation
 
 
-CLASS_NAME = [
+VOC_CLASS_NAME = [
     "back", 'aeroplane', 'bicycle', 'bird', 'boat',
     'bottle', 'bus', 'car', 'cat', 'chair',
     'cow', 'diningtable', 'dog', 'horse',
@@ -19,7 +19,7 @@ CLASS_NAME = [
     'sheep', 'sofa', 'train', 'tvmonitor'
 ]
 
-def load_voc_labels(img_id, voc_dir, augmentation, config):
+def load_voc_labels(img_id, class_names, voc_dir, augmentation, config):
 
     anno_path = os.path.join(voc_dir, 'Annotations', img_id + '.xml')
     objects = ET.parse(anno_path).findall('object')
@@ -47,7 +47,7 @@ def load_voc_labels(img_id, voc_dir, augmentation, config):
         # Add bbox
         t_bbox.append([xc, yc, w, h])
         # Add target class
-        t_class.append([CLASS_NAME.index(name)])
+        t_class.append([class_names.index(name)])
 
     t_bbox = np.array(t_bbox)
     t_class = np.array(t_class)
@@ -55,16 +55,16 @@ def load_voc_labels(img_id, voc_dir, augmentation, config):
     return t_bbox, t_class
 
 
-def load_voc_from_id(img_id, voc_dir, augmentation, config):
+def load_voc_from_id(img_id, class_names, voc_dir, augmentation, config):
     img_id = str(img_id.decode())
     # Load image
     img_path = os.path.join(voc_dir, 'JPEGImages', img_id + '.jpg')
     image = imageio.imread(img_path)
     # Load labels
-    t_bbox, t_class = load_voc_labels(img_id, voc_dir, augmentation, config)
+    t_bbox, t_class = load_voc_labels(img_id, class_names, voc_dir, augmentation, config)
     # Apply augmentations
     if augmentation is not None:
-        image, t_bbox, t_class = detr_aug(image, t_bbox,  t_class, augmentation)
+        image, t_bbox, t_class = transformation.detr_transform(image, t_bbox,  t_class, config, augmentation)
     # Normalized images
     image = processing.normalized_images(image, config)
     # Set type for tensorflow        
@@ -76,7 +76,7 @@ def load_voc_from_id(img_id, voc_dir, augmentation, config):
     return (image, t_bbox, t_class)
 
 
-def load_voc(train_val, batch_size, config, augmentation=False):
+def load_voc_dataset(train_val, class_names, batch_size, config, augmentation=False):
     """
     """
     # Set the background class to 0
@@ -94,8 +94,10 @@ def load_voc(train_val, batch_size, config, augmentation=False):
     dataset = tf.data.Dataset.from_tensor_slices(ids)
     dataset = dataset.shuffle(1000)
     # Retrieve img and labels
-    dataset = dataset.map(lambda idx: processing.numpy_fc(idx, load_voc_from_id, voc_dir=config.datadir, augmentation=augmentation, config=config), num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    # Filter labels to be sure to keep only sample with at least one bbox  
+    dataset = dataset.map(lambda idx: processing.numpy_fc(idx, load_voc_from_id, 
+        class_names=class_names, voc_dir=config.datadir, augmentation=augmentation, config=config)
+    , num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    # Filter labels to be sure to keep only sample with at least one bbox
     dataset = dataset.filter(lambda imgs, tbbox, tclass: tf.shape(tbbox)[0] > 0)
     # Pad bbox and labels
     dataset = dataset.map(processing.pad_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)

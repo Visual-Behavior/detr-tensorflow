@@ -36,10 +36,11 @@ def training_config_parser():
 class TrainingConfig():
 
     def __init__(self):
-        
+
         # Dataset info
         self.datadir = None
         self.background_class = 0
+        self.image_size = 376, 672
 
         # What to train
         self.train_backbone = False

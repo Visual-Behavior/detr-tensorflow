@@ -1,8 +1,8 @@
 import tensorflow as tf
 
-from optimizers import gather_gradient, aggregate_grad_and_apply
-from logger.training_logging import valid_log, train_log
-from loss.loss import get_losses
+from .optimizers import gather_gradient, aggregate_grad_and_apply
+from .logger.training_logging import valid_log, train_log
+from .loss.loss import get_losses
 import time
 import wandb
 

@@ -5,20 +5,23 @@ import cv2
 
 CLASS_COLOR_MAP = np.random.randint(0, 255, (100, 3))
 
-import bbox
+from detr_tf import bbox
 
-def numpy_bbox_to_image(image, bbox_list, labels=None, scores=None, class_name=[], unnormalized=False):
+def numpy_bbox_to_image(image, bbox_list, labels=None, scores=None, class_name=[], config=None):
     """ Numpy function used to display the bbox (target or prediction)
     """
     assert(image.dtype == np.float32 and image.dtype == np.float32 and len(image.shape) == 3)
 
-    if unnormalized:
+    if config is not None and config.normalized_method == "torch_resnet":
         channel_avg = np.array([0.485, 0.456, 0.406])
         channel_std = np.array([0.229, 0.224, 0.225])
         image = (image * channel_std) + channel_avg
         image = (image*255).astype(np.uint8)
-
-
+    elif config is not None and config.normalized_method == "tf_resnet":
+        image = image + mean
+        image = image[..., ::-1]
+        image = image  / 255
+        
     bbox_xcycwh = bbox.np_rescale_bbox_xcycwh(bbox_list, (image.shape[0], image.shape[1])) 
     bbox_x1y1x2y2 = bbox.np_xcycwh_to_xy_min_xy_max(bbox_xcycwh)
 

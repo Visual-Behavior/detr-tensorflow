@@ -6,13 +6,11 @@ from skimage.color import gray2rgb
 from random import sample, shuffle
 import os
 
-from inference import numpy_bbox_to_image
-from data.augmentation import detr_aug
-from data import processing
+from . import transformation
+from . import processing
 import matplotlib.pyplot as plt
 
-
-CLASS_NAME = [
+COCO_CLASS_NAME = [
     'N/A', 'person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus',
     'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 'N/A',
     'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 'horse',
@@ -28,7 +26,6 @@ CLASS_NAME = [
     'book', 'clock', 'vase', 'scissors', 'teddy bear', 'hair drier',
     'toothbrush', "back"
 ]
-
 
 def get_coco_labels(coco, img_id, image_shape, augmentation):
     # Load the labels the instances
@@ -74,7 +71,7 @@ def get_coco_from_id(coco_id, coco_dir, coco, train_val, augmentation, config):
     t_bbox, t_class, is_crowd = get_coco_labels(coco, img['id'], image.shape, augmentation)
     # Apply augmentations
     if len(t_bbox) > 0 and augmentation is not None:
-        image, t_bbox, t_class = detr_aug(image, t_bbox,  t_class, augmentation)
+        image, t_bbox, t_class = transformation.detr_transform(image, t_bbox,  t_class, config, augmentation)
     # Normalized images
     image = processing.normalized_images(image, config)
     # Set type for tensorflow        
@@ -84,7 +81,7 @@ def get_coco_from_id(coco_id, coco_dir, coco, train_val, augmentation, config):
     return image, t_bbox, t_class, is_crowd
 
 
-def load_coco(train_val, batch_size, config, augmentation=False):
+def load_coco_dataset(train_val, batch_size, config, augmentation=False):
     """
     """
     # Set the coco background class on the config

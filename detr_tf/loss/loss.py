@@ -1,6 +1,6 @@
 import tensorflow as tf
-import bbox
-from loss.hungarian_matching import hungarian_matching
+from .. import bbox
+from .hungarian_matching import hungarian_matching
 
 
 def get_total_losss(losses):

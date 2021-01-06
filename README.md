@@ -24,14 +24,23 @@ Additionally, our logging system is based on https://www.wandb.com/ so that you 
 - Finetuning ✔️
 - Evaluation ✔️
 - Inference ✔️
-- Jupyter notebook for finetuning ⌛
-- Jupyter notebbok guide to setup your dataset ⌛
+- Jupyter notebook for finetuning ✔️
+- Jupyter notebbok guide to setup your dataset ✔️
 - Multi-GPU Training ⌛
-- Training with weight decay ⌛
+- Adam with weight decay ⌛
 - Transformer attention head logging into wandb
 - DETR-DC5
 - DETR-R101
 - DETR-DC5-R101
+
+
+## Datasets
+
+This repository currently support three dataset format : **COCO**, **VOC** and **Tensorflow Object detection csv**. The easiest way to get started is to setup your dataset based on one of theses format. Along with the datasets, we provide code exmaple to finetune your model.
+
+Finally, we provide a jupyter notebook to help you understand how to load a dataset, setup a custom dataset and finetune your model.
+
+<img src="images/datasetsupport.png"></img>
 
 
 ## Install
@@ -46,6 +55,7 @@ numpy
 pycocotools
 scikit-image
 imageio
+pandas
 ```
 
 ```

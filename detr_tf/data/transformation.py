@@ -51,7 +51,7 @@ def prepare_aug_inputs(image, bbox, t_class):
     return images_batch, bbox_batch
 
 
-def detr_aug_seq(image, augmenation):
+def detr_aug_seq(image, config, augmenation):
 
 
     sometimes = lambda aug: iaa.Sometimes(0.5, aug)
@@ -66,7 +66,7 @@ def detr_aug_seq(image, augmenation):
     if augmenation:
 
         # Fixe size mode
-        image_size = 376, 672
+        image_size = config.image_size
         seq = iaa.Sequential([
             iaa.Fliplr(0.5), # horizontal flips
             sometimes(iaa.OneOf([
@@ -163,14 +163,13 @@ def retrieve_outputs(augmented_images, augmented_bbox):
 
 
 
-def detr_aug(image, bbox, t_class, augmentation):
+def detr_transform(image, bbox, t_class, config, augmentation):
 
-    #print("1) bbox", bbox)
-    # Prepare the augmenation input pipeline
+
     images_batch, bbox_batch = prepare_aug_inputs(image, bbox, t_class)
-    #print("2) bbox_batch", bbox_batch)
 
-    seq = detr_aug_seq(image, augmentation)
+
+    seq = detr_aug_seq(image, config, augmentation)
 
     # Run the pipeline in a deterministic manner
     seq_det = seq.to_deterministic()
@@ -184,7 +183,6 @@ def detr_aug(image, bbox, t_class, augmentation):
         img_aug = seq_det.augment_image(img)
         bbox_aug = seq_det.augment_bounding_boxes(bbox)
 
-        #print("3) bbox_aug", bbox_aug)
 
         for b, bbox_instance in enumerate(bbox_aug.items):
             setattr(bbox_instance, "instance_id", b+1)
@@ -193,7 +191,6 @@ def detr_aug(image, bbox, t_class, augmentation):
         segmap_aug = None
         bbox_aug = bbox_aug.clip_out_of_image()
 
-        #print("4) bbox_aug", bbox_aug)
 
         augmented_images.append(img_aug)
         augmented_bbox.append(bbox_aug)

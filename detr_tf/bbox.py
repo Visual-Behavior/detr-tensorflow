@@ -11,42 +11,6 @@ import random
 import cv2
 
 
-def np_rescale_bbox_xcycwh(bbox_xcycwh: np.array, img_size: tuple):
-    """
-        Rescale a list of bbox to the image size
-        @bbox_xcycwh: [[xc, yc, w, h], ...]
-        @img_size (height, width)
-    """
-    bbox_xcycwh = np.array(bbox_xcycwh) # Be sure to work with a numpy array
-    scale = np.array([img_size[1], img_size[0], img_size[1], img_size[0]])
-    bbox_xcycwh_rescaled = bbox_xcycwh * scale
-    return bbox_xcycwh_rescaled
-
-
-def np_rescale_bbox_yx_min_yx_max(bbox_xcycwh: np.array, img_size: tuple):
-    """
-        Rescale a list of bbox to the image size
-        @bbox_xcycwh: [[y_min, x_min, y_max, x_max], ...]
-        @img_size (height, width)
-    """
-    bbox_xcycwh = np.array(bbox_xcycwh) # Be sure to work with a numpy array
-    scale = np.array([img_size[0], img_size[1], img_size[0], img_size[1]])
-    bbox_xcycwh_rescaled = bbox_xcycwh * scale
-    return bbox_xcycwh_rescaled
-
-
-def np_rescale_bbox_xy_min_xy_max(bbox: np.array, img_size: tuple):
-    """
-        Rescale a list of bbox to the image size
-        @bbox: [[x_min, y_min, x_max, y_max], ...]
-        @img_size (height, width)
-    """
-    bbox = np.array(bbox) # Be sure to work with a numpy array
-    scale = np.array([img_size[1], img_size[0], img_size[1], img_size[0]])
-    bbox_rescaled = bbox * scale
-    return bbox_rescaled
-
-
 def bbox_xcycwh_to_x1y1x2y2(bbox_xcycwh: np.array):
     """
         Rescale a list of bbox to the image size
@@ -174,22 +138,6 @@ def xy_min_xy_max_to_yx_min_yx_max(bbox: tf.Tensor) -> tf.Tensor:
         bbox[:,2:3]
     ], axis=-1)
 
-def np_yx_min_yx_max_to_xy_min_xy_max(bbox: np.array) -> np.array:
-    """
-    Convert bbox from shape [ymin, xmin, ymax, xmax] to [xmin, ymin, xmax, ymax]
-    Args:
-        bbox A (np.array) list a bbox (n, 4) with n the number of bbox to convert
-    Returns:
-        The converted bbox
-    """
-    return np.concatenate([
-        bbox[:,1:2],
-        bbox[:,0:1],
-        bbox[:,3:4],
-        bbox[:,2:3]
-    ], axis=-1)
-
-
 def yx_min_yx_max_to_xy_min_xy_max(bbox: tf.Tensor) -> tf.Tensor:
     """
     Convert bbox from shape [ymin, xmin, ymax, xmax] to [xmin, ymin, xmax, ymax]
@@ -219,17 +167,6 @@ def xy_min_xy_max_to_xcycwh(bbox: tf.Tensor) -> tf.Tensor:
     return bbox_xcycwh
 
 
-def np_xcycwh_to_xy_min_xy_max(bbox: np.array) -> np.array:
-    """
-    Convert bbox from shape [xc, yc, w, h] to [xmin, ymin, xmax, ymax]
-    Args:
-        bbox A (tf.Tensor) list a bbox (n, 4) with n the number of bbox to convert
-    Returns:
-        The converted bbox
-    """
-    # convert the bbox from [xc, yc, w, h] to [xmin, ymin, xmax, ymax].
-    bbox_xy = np.concatenate([bbox[:, :2] - (bbox[:, 2:] / 2), bbox[:, :2] + (bbox[:, 2:] / 2)], axis=-1)
-    return bbox_xy
 
 def xcycwh_to_xy_min_xy_max(bbox: tf.Tensor) -> tf.Tensor:
     """
@@ -270,4 +207,89 @@ def yx_min_yx_max_to_xcycwh(bbox: tf.Tensor) -> tf.Tensor:
     bbox = yx_min_yx_max_to_xy_min_xy_max(bbox)
     bbox = xy_min_xy_max_to_xcycwh(bbox)
     return bbox
+
+
+
+"""
+Numpy Transformations
+"""
+
+def xy_min_xy_max_to_xcycwh(bbox: np.array) -> np.array:
+    """
+    Convert bbox from shape [xmin, ymin, xmax, ymax] to [xc, yc, w, h]
+    Args:
+        bbox A (np.array) list a bbox (n, 4) with n the number of bbox to convert
+    Returns:
+        The converted bbox
+    """
+    # convert the bbox from [xmin, ymin, xmax, ymax] to [x_center, y_center, w, h]
+    bbox_xcycwh = np.concatenate([bbox[:, :2] + ((bbox[:, 2:] - bbox[:, :2]) / 2), bbox[:, 2:] - bbox[:, :2]], axis=-1)
+    return bbox_xcycwh
+
+
+def np_xcycwh_to_xy_min_xy_max(bbox: np.array) -> np.array:
+    """
+    Convert bbox from shape [xc, yc, w, h] to [xmin, ymin, xmax, ymax]
+    Args:
+        bbox A (tf.Tensor) list a bbox (n, 4) with n the number of bbox to convert
+    Returns:
+        The converted bbox
+    """
+    # convert the bbox from [xc, yc, w, h] to [xmin, ymin, xmax, ymax].
+    bbox_xy = np.concatenate([bbox[:, :2] - (bbox[:, 2:] / 2), bbox[:, :2] + (bbox[:, 2:] / 2)], axis=-1)
+    return bbox_xy
+
+
+
+def np_yx_min_yx_max_to_xy_min_xy_max(bbox: np.array) -> np.array:
+    """
+    Convert bbox from shape [ymin, xmin, ymax, xmax] to [xmin, ymin, xmax, ymax]
+    Args:
+        bbox A (np.array) list a bbox (n, 4) with n the number of bbox to convert
+    Returns:
+        The converted bbox
+    """
+    return np.concatenate([
+        bbox[:,1:2],
+        bbox[:,0:1],
+        bbox[:,3:4],
+        bbox[:,2:3]
+    ], axis=-1)
+
+
+
+def np_rescale_bbox_xcycwh(bbox_xcycwh: np.array, img_size: tuple):
+    """
+        Rescale a list of bbox to the image size
+        @bbox_xcycwh: [[xc, yc, w, h], ...]
+        @img_size (height, width)
+    """
+    bbox_xcycwh = np.array(bbox_xcycwh) # Be sure to work with a numpy array
+    scale = np.array([img_size[1], img_size[0], img_size[1], img_size[0]])
+    bbox_xcycwh_rescaled = bbox_xcycwh * scale
+    return bbox_xcycwh_rescaled
+
+
+def np_rescale_bbox_yx_min_yx_max(bbox_xcycwh: np.array, img_size: tuple):
+    """
+        Rescale a list of bbox to the image size
+        @bbox_xcycwh: [[y_min, x_min, y_max, x_max], ...]
+        @img_size (height, width)
+    """
+    bbox_xcycwh = np.array(bbox_xcycwh) # Be sure to work with a numpy array
+    scale = np.array([img_size[0], img_size[1], img_size[0], img_size[1]])
+    bbox_xcycwh_rescaled = bbox_xcycwh * scale
+    return bbox_xcycwh_rescaled
+
+
+def np_rescale_bbox_xy_min_xy_max(bbox: np.array, img_size: tuple):
+    """
+        Rescale a list of bbox to the image size
+        @bbox: [[x_min, y_min, x_max, y_max], ...]
+        @img_size (height, width)
+    """
+    bbox = np.array(bbox) # Be sure to work with a numpy array
+    scale = np.array([img_size[1], img_size[0], img_size[1], img_size[0]])
+    bbox_rescaled = bbox * scale
+    return bbox_rescaled
 

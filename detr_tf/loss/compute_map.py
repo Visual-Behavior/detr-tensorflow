@@ -10,7 +10,7 @@ import time
 import cv2
 import os
 
-import bbox
+from ..import bbox
 from collections import OrderedDict
 
 

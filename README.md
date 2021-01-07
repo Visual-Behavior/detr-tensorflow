@@ -12,26 +12,13 @@ Tensorflow implementation of DETR : Object Detection with Transformers, includin
 
 Additionally, our logging system is based on https://www.wandb.com/ so that you can get a great visualization of your model performance!
 
+- Checkout our logging board here: https://wandb.ai/thibault-neveu/detr-tensorflow-log
+- Also we released the following wandb report to help you getting started with the repository and the logs
+    - link
+
 
 <img src="images/wandb_logging.png"></img>
 
-
-## Current and upcoming features
-
-- DETR Model ✔️
-- Training ✔️
-- Gradient aggregate ✔️
-- Finetuning ✔️
-- Evaluation ✔️
-- Inference ✔️
-- Jupyter notebook for finetuning ✔️
-- Jupyter notebbok guide to setup your dataset ✔️
-- Multi-GPU Training ⌛
-- Adam with weight decay ⌛
-- Transformer attention head logging into wandb
-- DETR-DC5
-- DETR-R101
-- DETR-DC5-R101
 
 
 ## Datasets
@@ -41,6 +28,18 @@ This repository currently support three dataset format : **COCO**, **VOC** and *
 Finally, we provide a jupyter notebook to help you understand how to load a dataset, setup a custom dataset and finetune your model.
 
 <img src="images/datasetsupport.png"></img>
+
+## Tutorials
+
+To get started with the repository you can check the following Jupyter notebooks:
+
+- ✍ How to load a dataset.ipynb
+- ✍ DETR Tensorflow - Finetuning tutorial.ipynb
+- ✍ DETR Tensorflow - How to setup a custom dataset.ipynb
+
+As well as the logging board on wandb https://wandb.ai/thibault-neveu/detr-tensorflow-log with the following report:
+
+- 🚀 Finetuning DETR on Tensorflow - A step by step guide
 
 
 ## Install
@@ -73,6 +72,7 @@ python eval.py --datadir /path/to/coco
 ```
 
 Outputs:
+
 ```
        |  all  |  .50  |  .55  |  .60  |  .65  |  .70  |  .75  |  .80  |  .85  |  .90  |  .95  |
 -------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+-------+
@@ -90,39 +90,30 @@ The result is not the same as reported in the paper because the evaluation is ru
 To fine-tune the model on a new dataset, we must remove the last layers that predict the box class and positions.
 
 ```python
-# Input
-image_input = tf.keras.Input((None, None, 3))
-
 # Load the pretrained model
-detr = get_detr_model(config, include_top=False, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
-
-# Setup the new layers
-cls_layer = tf.keras.layers.Dense(len(CLASS_NAME), name="cls_layer")
-pos_layer = tf.keras.models.Sequential([
-    tf.keras.layers.Dense(256, activation="relu"),
-    tf.keras.layers.Dense(256, activation="relu"),
-    tf.keras.layers.Dense(4, activation="sigmoid"),
-], name="pos_layer")
-
-transformer_output = detr(image_input)
-cls_preds = cls_layer(transformer_output)
-pos_preds = pos_layer(transformer_output)
-
-# Define the main outputs along with the auxialiary loss
-outputs = {'pred_logits': cls_preds[-1], 'pred_boxes': pos_preds[-1]}
-outputs["aux"] = [ {"pred_logits": cls_preds[i], "pred_boxes": pos_preds[i]} for i in range(0, 5)]
-
-detr = tf.keras.Model(image_input, outputs, name="detr_finetuning")
+detr = get_detr_model(config, include_top=False, nb_class=3, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
 detr.summary()
-return detr
+
+# Load your dataset
+train_dt, class_names = load_tfcsv_dataset("train", config.batch_size, config, augmentation=True)
+
+# Setup the optimziers and the trainable variables
+optimzers = setup_optimizers(detr, config
+
+# Train the model
+training.fit(detr, train_dt, optimzers, config, epoch_nb, class_names)
 ```
-
-The following script gives an example to finetune the model on a new dataset (VOC) with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used for logging the training into wandb. 
-
-
+The following commands gives an example to finetune the model on a new dataset (VOC) and (The Hard hat dataset) with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used for logging the training into wandb. 
 ```
 python finetune_voc.py --datadir /path/to/VOCdevkit/VOC2012 --batch_size 8 --target_batch 32  --log
 ```
+```
+python  finetune_hardhat.py --datadir /home/thibault/data/hardhat/ --batch_size 8 --target_batch 32 --log
+```
+
+
+
+
 
 ## Training on COCO
 

@@ -17,7 +17,13 @@ from detr_tf.loss.loss import get_losses
 from detr_tf.training_config import TrainingConfig, training_config_parser
 from detr_tf import training
 
-import wandb
+try:
+    # Should be optional if --log is not set
+    import wandb
+except:
+    wandb = None
+
+
 import time
 
 

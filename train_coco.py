@@ -19,7 +19,13 @@ from detr_tf.inference import numpy_bbox_to_image
 from detr_tf.training_config import TrainingConfig, training_config_parser
 from detr_tf import training
 
-import wandb
+try:
+    # Should be optional if --log is not set
+    import wandb
+except:
+    wandb = None
+
+
 import time
 
 

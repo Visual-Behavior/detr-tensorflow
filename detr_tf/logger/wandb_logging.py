@@ -4,7 +4,13 @@
 from typing import Union,Dict,Tuple
 import tensorflow as tf
 import numpy as np
-import wandb
+
+try:
+    # Should be optional
+    import wandb
+except:
+    wandb = None
+
 import cv2
 
 from ..loss.compute_map import cal_map, calc_map, APDataObject

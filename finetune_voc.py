@@ -7,7 +7,13 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 import time
-import wandb
+
+try:
+    # Should be optional if --log is not set
+    import wandb
+except:
+    wandb = None
+
 import os
 
 from detr_tf.data import load_voc_dataset

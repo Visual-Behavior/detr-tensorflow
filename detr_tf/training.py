@@ -32,7 +32,7 @@ def run_val_step(model, images, t_bbox, t_class, config):
     return m_outputs, total_loss, log
 
 
-def fit(model, train_dt, optimizers, config, epoch_nb, class_name):
+def fit(model, train_dt, optimizers, config, epoch_nb, class_names):
     """ Train the model for one epoch
     """
     # Aggregate the gradient for bigger batch and better convergence
@@ -47,7 +47,7 @@ def fit(model, train_dt, optimizers, config, epoch_nb, class_name):
         
         # Load the predictions
         if config.log:
-            train_log(images, t_bbox, t_class, m_outputs, config, config.global_step,  class_name, prefix="train/")
+            train_log(images, t_bbox, t_class, m_outputs, config, config.global_step,  class_names, prefix="train/")
         
         # Aggregate and apply the gradient
         for name in gradient_steps:

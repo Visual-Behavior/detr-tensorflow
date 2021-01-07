@@ -82,7 +82,7 @@ def get_coco_from_id(coco_id, coco_dir, coco, train_val, augmentation, config):
 
 
 def load_coco_dataset(train_val, batch_size, config, augmentation=False):
-    """
+    """ Load a coco dataset
     """
     # Set the coco background class on the config
     config.background_class = 91
@@ -91,6 +91,17 @@ def load_coco_dataset(train_val, batch_size, config, augmentation=False):
     data_type = "train2017" if train_val == "train" else "val2017"
     ann_file = f"{config.datadir}/annotations/instances_{data_type}.json"
     coco = COCO(ann_file)
+
+    # Extract CLASS names
+    cats = coco.loadCats(coco.getCatIds())
+    # Get the max class ID
+    max_id = np.array([cat["id"] for cat in cats]).max()
+    class_names = ["N/A"] * (max_id + 2) # + 2 for the background class
+    # Add the backgrund class at the end
+    class_names[-1] = "back"
+    config.background_class = max_id + 1
+    for cat in cats:
+        class_names[cat["id"]] = cat["name"]
 
     # Setup the data pipeline
     img_ids = coco.getImgIds()
@@ -108,7 +119,8 @@ def load_coco_dataset(train_val, batch_size, config, augmentation=False):
     
     # Pad bbox and labels
     dataset = dataset.map(processing.pad_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    
+
     dataset = dataset.batch(batch_size, drop_remainder=True)
     dataset = dataset.prefetch(32)
-    return dataset
+    
+    return dataset, class_names

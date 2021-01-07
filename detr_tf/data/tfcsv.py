@@ -44,7 +44,7 @@ def load_tfcsv_dataset(train_val, batch_size, config, augmentation=False, exclud
 
     unique_class = anns["class"].unique()
     unique_class.sort()
-    CLASS_NAMES = ["background"] + unique_class.tolist()
+    class_names = ["background"] + unique_class.tolist()
 
     filenames = anns["filename"].unique().tolist()
     indexes = list(range(0, len(filenames)))
@@ -53,7 +53,7 @@ def load_tfcsv_dataset(train_val, batch_size, config, augmentation=False, exclud
     dataset = tf.data.Dataset.from_tensor_slices(indexes)
     dataset = dataset.map(lambda idx: processing.numpy_fc(
         idx, load_data_from_index, 
-        class_names=CLASS_NAMES, filenames=filenames, train_val=train_val, anns=anns, config=config, augmentation=augmentation)
+        class_names=class_names, filenames=filenames, train_val=train_val, anns=anns, config=config, augmentation=augmentation)
     ,num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
 
@@ -64,5 +64,5 @@ def load_tfcsv_dataset(train_val, batch_size, config, augmentation=False, exclud
     # Batch images
     dataset = dataset.batch(batch_size, drop_remainder=True)
     
-    return dataset
+    return dataset, class_names
 

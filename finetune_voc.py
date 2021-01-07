@@ -10,12 +10,19 @@ import time
 import wandb
 import os
 
-from detr_tf.data import load_voc_dataset, VOC_CLASS_NAME
+from detr_tf.data import load_voc_dataset
 from detr_tf.networks.detr import get_detr_model
 from detr_tf.optimizers import setup_optimizers
 from detr_tf.training_config import TrainingConfig, training_config_parser
 from detr_tf import training
 
+VOC_CLASS_NAME = [
+    'aeroplane', 'bicycle', 'bird', 'boat',
+    'bottle', 'bus', 'car', 'cat', 'chair',
+    'cow', 'diningtable', 'dog', 'horse',
+    'motorbike', 'person', 'pottedplant',
+    'sheep', 'sofa', 'train', 'tvmonitor'
+]
 
 def build_model(config):
     """ Build the model with the pretrained weights
@@ -28,7 +35,7 @@ def build_model(config):
     detr = get_detr_model(config, include_top=False, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
 
     # Setup the new layers
-    cls_layer = tf.keras.layers.Dense(len(VOC_CLASS_NAME), name="cls_layer")
+    cls_layer = tf.keras.layers.Dense(len(VOC_CLASS_NAME) + 1, name="cls_layer")
     pos_layer = tf.keras.models.Sequential([
         tf.keras.layers.Dense(256, activation="relu"),
         tf.keras.layers.Dense(256, activation="relu"),
@@ -55,8 +62,8 @@ def run_finetuning(config):
     detr = build_model(config)
 
     # Load the training and validation dataset
-    train_dt = load_voc_dataset("train", VOC_CLASS_NAME, config.batch_size, config, augmentation=True)
-    valid_dt = load_voc_dataset("val", VOC_CLASS_NAME, 1, config, augmentation=False)
+    train_dt, class_names = load_voc_dataset("train", VOC_CLASS_NAME, config.batch_size, config, augmentation=True)
+    valid_dt, _ = load_voc_dataset("val", VOC_CLASS_NAME, 1, config, augmentation=False)
 
     # Train/finetune the transformers only
     config.train_backbone = tf.Variable(False)
@@ -81,8 +88,8 @@ def run_finetuning(config):
             config.transformers_lr.assign(1e-4)
             config.nlayers_lr.assign(1e-3)
 
-        training.eval(detr, valid_dt, config, VOC_CLASS_NAME, evaluation_step=200)
-        training.fit(detr, train_dt, optimzers, config, epoch_nb, VOC_CLASS_NAME)
+        training.eval(detr, valid_dt, config, class_names, evaluation_step=200)
+        training.fit(detr, train_dt, optimzers, config, epoch_nb, class_names)
 
 
 if __name__ == "__main__":

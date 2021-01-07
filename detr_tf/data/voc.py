@@ -81,6 +81,7 @@ def load_voc_dataset(train_val, class_names, batch_size, config, augmentation=Fa
     """
     # Set the background class to 0
     config.background_class = 0
+    class_names = ["back"] + class_names
 
     image_dir = os.path.join(config.datadir, 'JPEGImages')
     anno_dir = os.path.join(config.datadir, 'Annotations')
@@ -105,4 +106,4 @@ def load_voc_dataset(train_val, class_names, batch_size, config, augmentation=Fa
     dataset = dataset.batch(batch_size, drop_remainder=True)
     # Prefetch
     dataset = dataset.prefetch(32)
-    return dataset
+    return dataset, class_names

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from detr_tf.inference import get_model_inference
-from detr_tf.data.coco import load_coco_dataset, COCO_CLASS_NAME
+from detr_tf.data.coco import load_coco_dataset
 from detr_tf.loss.compute_map import cal_map, calc_map, APDataObject
 from detr_tf.networks.detr import get_detr_model
 from detr_tf.bbox import xcycwh_to_xy_min_xy_max, xcycwh_to_yx_min_yx_max
@@ -63,7 +63,8 @@ def eval_model(model, config, class_names, valid_dt):
 if __name__ == "__main__":
 
     physical_devices = tf.config.list_physical_devices('GPU')
-    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+    if len(physical_devices) == 1:
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     config = TrainingConfig()
     args = training_config_parser().parse_args()
@@ -72,9 +73,9 @@ if __name__ == "__main__":
     # Load the model with the new layers to finetune
     detr = build_model(config)
 
-    valid_dt = load_coco_dataset("val", 1, config, augmentation=None)
+    valid_dt, class_names = load_coco_dataset("val", 1, config, augmentation=None)
 
     # Run training
-    eval_model(detr, config, COCO_CLASS_NAME, valid_dt)
+    eval_model(detr, config, class_names, valid_dt)
 
 

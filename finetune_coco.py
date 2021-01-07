@@ -8,7 +8,7 @@ import numpy as np
 import time
 import os
 
-from detr_tf.data.coco import load_coco_dataset, COCO_CLASS_NAME
+from detr_tf.data.coco import load_coco_dataset
 from detr_tf.networks.detr import get_detr_model
 from detr_tf.optimizers import setup_optimizers
 from detr_tf.optimizers import gather_gradient, aggregate_grad_and_apply
@@ -38,8 +38,8 @@ def run_finetuning(config):
     detr = build_model(config)
 
     # Load the training and validation dataset
-    train_dt = load_coco_dataset("train", config.batch_size, config, augmentation=True)
-    valid_dt = load_coco_dataset("val", 1, config, augmentation=False)
+    train_dt, coco_class_names = load_coco_dataset("train", config.batch_size, config, augmentation=True)
+    valid_dt, _ = load_coco_dataset("val", 1, config, augmentation=False)
 
     # Train/finetune the transformers only
     config.train_backbone = False
@@ -50,8 +50,8 @@ def run_finetuning(config):
 
     # Run the training for 5 epochs
     for epoch_nb in range(100):
-        training.eval(detr, valid_dt, config, COCO_CLASS_NAME, evaluation_step=200)
-        training.fit(detr, train_dt, optimzers, config, epoch_nb, COCO_CLASS_NAME)
+        training.eval(detr, valid_dt, config, coco_class_names, evaluation_step=200)
+        training.fit(detr, train_dt, optimzers, config, epoch_nb, coco_class_names)
 
 
 if __name__ == "__main__":

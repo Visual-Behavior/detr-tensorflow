@@ -31,15 +31,21 @@ def load_data_from_index(index, class_names, filenames, train_val, anns, config,
 
     # Normalized image
     image = processing.normalized_images(image, config)
-            
-    return image.astype(np.float32), t_bbox.astype(np.float32), np.expand_dims(t_class, axis=-1)
+
+    return image.astype(np.float32), t_bbox.astype(np.float32), np.expand_dims(t_class, axis=-1).astype(np.int64)
 
 
-def load_tfcsv_dataset(train_val, batch_size, config, augmentation=False):
+def load_tfcsv_dataset(train_val, batch_size, config, augmentation=False, exclude=[]):
     """ Load the hardhat dataset
     """
     anns = pd.read_csv(os.path.join(config.datadir, f'{train_val}/_annotations.csv'))
-    CLASS_NAMES = ["background"] + anns["class"].unique().tolist()
+    for name  in exclude:
+        anns = anns[anns["class"] != name]
+
+    unique_class = anns["class"].unique()
+    unique_class.sort()
+    CLASS_NAMES = ["background"] + unique_class.tolist()
+
     filenames = anns["filename"].unique().tolist()
     indexes = list(range(0, len(filenames)))
     shuffle(indexes)

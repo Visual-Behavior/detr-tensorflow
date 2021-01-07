@@ -41,7 +41,7 @@ def fit(model, train_dt, optimizers, config, epoch_nb, class_name):
         gradient_aggregate = int(config.target_batch // config.batch_size)
     t = None
     for epoch_step , (images, t_bbox, t_class) in enumerate(train_dt):
-        
+
         # Run the prediction and retrieve the gradient step for each part of the network
         m_outputs, total_loss, log, gradient_steps = run_train_step(model, images, t_bbox, t_class, optimizers, config)
         

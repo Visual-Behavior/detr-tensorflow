@@ -63,10 +63,9 @@ def detr_aug_seq(image, config, augmenation):
     min_side_max = 800 
     max_side_max = 1333
 
+    image_size = config.image_size
     if augmenation:
 
-        # Fixe size mode
-        image_size = config.image_size
         seq = iaa.Sequential([
             iaa.Fliplr(0.5), # horizontal flips
             sometimes(iaa.OneOf([
@@ -87,8 +86,6 @@ def detr_aug_seq(image, config, augmenation):
 
     else:
 
-        # Fixe size mode
-        image_size = 376, 672
         seq = iaa.Sequential([
             # Be sure to resize to the target image size
             iaa.Resize({"width": image_size[1], "height": image_size[0]})

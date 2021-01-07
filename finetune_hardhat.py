@@ -19,14 +19,15 @@ from detr_tf.networks.detr import get_detr_model
 from detr_tf.optimizers import setup_optimizers
 from detr_tf.logger.training_logging import train_log, valid_log
 from detr_tf.loss.loss import get_losses
-from detr_tf.inference import numpy_bbox_to_image
+from detr_tf.inferenclse import numpy_bbox_to_image
 from detr_tf.training_config import TrainingConfig, training_config_parser
 from detr_tf import training
 
 import wandb
 import time
 
-CLASS_NAME = ['background', 'head', 'helmet', 'person']
+# Exclude the person class
+CLASS_NAME = ['background', 'head', 'helmet']
 
 def build_model(config):
     """ Build the model with the pretrained weights
@@ -43,9 +44,9 @@ def run_finetuning(config):
     # Load the model with the new layers to finetune
     detr = build_model(config)
 
-    # Load the training and validation dataset
-    train_dt = load_tfcsv_dataset("train", config.batch_size, config, augmentation=True)
-    valid_dt = load_tfcsv_dataset("test", 1, config, augmentation=False)
+    # Load the training and validation dataset and exclude the person class
+    train_dt = load_tfcsv_dataset("train", config.batch_size, config, augmentation=True, exclude=["person"])
+    valid_dt = load_tfcsv_dataset("test", 4, config, augmentation=False, exclude=["person"])
 
     # Train/finetune the transformers only
     config.train_backbone = tf.Variable(False)
@@ -61,8 +62,8 @@ def run_finetuning(config):
     # Setup the optimziers and the trainable variables
     optimzers = setup_optimizers(detr, config)
 
-    # Run the training for 5 epochs
-    for epoch_nb in range(10):
+    # Run the training for 180 epochs
+    for epoch_nb in range(180):
 
         if epoch_nb > 0:
             # After the first epoch, we finetune the transformers and the new layers
@@ -70,7 +71,7 @@ def run_finetuning(config):
             config.transformers_lr.assign(1e-4)
             config.nlayers_lr.assign(1e-3)
 
-        training.eval(detr, valid_dt, config, CLASS_NAME, evaluation_step=200)
+        training.eval(detr, valid_dt, config, CLASS_NAME, evaluation_step=100)
         training.fit(detr, train_dt, optimzers, config, epoch_nb, CLASS_NAME)
 
 

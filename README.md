@@ -12,13 +12,9 @@ Tensorflow implementation of DETR : Object Detection with Transformers, includin
 
 Additionally, our logging system is based on https://www.wandb.com/ so that you can get a great visualization of your model performance!
 
-- Checkout our logging board here: https://wandb.ai/thibault-neveu/detr-tensorflow-log
-- Also we released the following wandb report to help you getting started with the repository and the logs
-    - link
-
+- Checkout our logging board with the reports here: https://wandb.ai/thibault-neveu/detr-tensorflow-log
 
 <img src="images/wandb_logging.png"></img>
-
 
 
 ## Datasets
@@ -33,13 +29,13 @@ Finally, we provide a jupyter notebook to help you understand how to load a data
 
 To get started with the repository you can check the following Jupyter notebooks:
 
-- ✍ How to load a dataset.ipynb
-- ✍ DETR Tensorflow - Finetuning tutorial.ipynb
-- ✍ DETR Tensorflow - How to setup a custom dataset.ipynb
+- ✍ [How to load a dataset.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/How%20to%20load%20a%20dataset.ipynb)
+- ✍ [DETR Tensorflow - Finetuning tutorial.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/DETR%20Tensorflow%20-%20%20Finetuning%20tutorial.ipynb)
+- ✍ [DETR Tensorflow - How to setup a custom dataset.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/DETR%20Tensorflow%20-%20%20How%20to%20setup%20a%20custom%20dataset.ipynb)
 
 As well as the logging board on wandb https://wandb.ai/thibault-neveu/detr-tensorflow-log with the following report:
 
-- 🚀 Finetuning DETR on Tensorflow - A step by step guide
+- 🚀 [Finetuning DETR on Tensorflow - A step by step guide](https://wandb.ai/thibault-neveu/detr-tensorflow-log/reports/Finetuning-DETR-on-Tensorflow-A-step-by-step-tutorial--VmlldzozOTYyNzQ)
 
 
 ## Install

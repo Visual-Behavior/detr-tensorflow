@@ -54,8 +54,8 @@ def eval_model(model, config, class_names, valid_dt):
         cal_map(p_bbox, p_labels, p_scores,  np.zeros((138, 138, len(p_bbox))), np.array(t_bbox), np.array(t_class), np.zeros((138, 138, len(t_bbox))), ap_data, iou_thresholds)
         print(f"Computing map.....{it}", end="\r")
         it += 1
-        if it > 10:
-            break
+        #if it > 10:
+        #    break
 
     # Compute the mAp over all thresholds
     calc_map(ap_data, iou_thresholds, class_names, print_result=True)

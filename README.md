@@ -2,8 +2,18 @@
 
 Tensorflow implementation of DETR : Object Detection with Transformers, including code for inference, training, and finetuning. DETR is a promising model that brings widely adopted transformers to vision models. We believe that models based on convolution and transformers will soon become the default choice for most practitioners because of the simplicity of the training procedure: NMS and anchors free! Therefore this repository is a step toward making this type of architecture widely available. 
 
+* [1. Install](#install)
+* [2. Datasets](#datasets)
+* [3. Tutorials](#tutorials)
+* [4. Finetuning](#finetuning)
+* [5. Training](#training)
+* [5. inference](#inference)
+* [6. Acknowledgement](#acknowledgement)
 
-<b>About this implementation:</b> https://arxiv.org/pdf/2005.12872.pdf <br>
+
+Inference
+
+<b>DETR paper:</b> https://arxiv.org/pdf/2005.12872.pdf <br>
 <b>Torch implementation: https://github.com/facebookresearch/detr</b>
 
 <img src="images/detr-figure.png"></img>
@@ -15,6 +25,26 @@ Additionally, our logging system is based on https://www.wandb.com/ so that you 
 - Checkout our logging board with the reports here: https://wandb.ai/thibault-neveu/detr-tensorflow-log
 
 <img src="images/wandb_logging.png"></img>
+
+## Install
+
+The code has been currently tested with Tensorflow 2.3.0 and python 3.7. The following dependencies are required.
+
+
+```
+wandb
+matplotlib
+numpy
+pycocotools
+scikit-image
+imageio
+pandas
+```
+
+```
+pip install -r requirements.txt
+```
+
 
 
 ## Datasets
@@ -38,27 +68,7 @@ As well as the logging board on wandb https://wandb.ai/thibault-neveu/detr-tenso
 - 🚀 [Finetuning DETR on Tensorflow - A step by step guide](https://wandb.ai/thibault-neveu/detr-tensorflow-log/reports/Finetuning-DETR-on-Tensorflow-A-step-by-step-tutorial--VmlldzozOTYyNzQ)
 
 
-## Install
-
-The code has been currently tested with Tensorflow 2.3.0 and python 3.7. The following dependencies are required.
-
-
-```
-wandb
-matplotlib
-numpy
-pycocotools
-scikit-image
-imageio
-pandas
-```
-
-```
-pip install -r requirements.txt
-```
-
-
-## Evaluation :
+## Evaluation
 
 Run the following to evaluate the model using the pre-trained weights:
 
@@ -81,7 +91,7 @@ Outputs:
 The result is not the same as reported in the paper because the evaluation is run on the <b>original image size</b> and not on the larger images. The actual implementation resizes the image so that the shorter side is at least 800pixels and the longer side at most 1333.
 
 
-## Finetune on your dataset
+## Finetuning
 
 To fine-tune the model on a new dataset we siply need to set the number of class to detect in our new dataset (**nb_class**). The method will remove the last layers that predict the box class&positions and add new layers to finetune.
 
@@ -107,11 +117,7 @@ python finetune_voc.py --datadir /path/to/VOCdevkit/VOC2012 --batch_size 8 --tar
 python  finetune_hardhat.py --datadir /path/to/hardhat/dataset --batch_size 8 --target_batch 32 --log
 ```
 
-
-
-
-
-## Training on COCO
+## Training
 
 (Multi GPU training comming soon)
 

@@ -19,9 +19,9 @@ Additionally, our logging system is based on https://www.wandb.com/ so that you 
 
 ## Datasets
 
-This repository currently support three dataset format : **COCO**, **VOC** and **Tensorflow Object detection csv**. The easiest way to get started is to setup your dataset based on one of theses format. Along with the datasets, we provide code exmaple to finetune your model.
 
-Finally, we provide a jupyter notebook to help you understand how to load a dataset, setup a custom dataset and finetune your model.
+This repository currently supports three dataset formats: **COCO**, **VOC**, and **Tensorflow Object detection csv**. The easiest way to get started is to set up your dataset based on one of these formats. Along with the datasets, we provide a code example to finetune your model.
+Finally, we provide a jupyter notebook to help you understand how to load a dataset, set up a custom dataset, and finetune your model.
 
 <img src="images/datasetsupport.png"></img>
 
@@ -29,11 +29,11 @@ Finally, we provide a jupyter notebook to help you understand how to load a data
 
 To get started with the repository you can check the following Jupyter notebooks:
 
-- ✍ [How to load a dataset.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/How%20to%20load%20a%20dataset.ipynb)
+- ✍ [DETR Tensorflow - How to load a dataset.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/How%20to%20load%20a%20dataset.ipynb)
 - ✍ [DETR Tensorflow - Finetuning tutorial.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/DETR%20Tensorflow%20-%20%20Finetuning%20tutorial.ipynb)
 - ✍ [DETR Tensorflow - How to setup a custom dataset.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/DETR%20Tensorflow%20-%20%20How%20to%20setup%20a%20custom%20dataset.ipynb)
 
-As well as the logging board on wandb https://wandb.ai/thibault-neveu/detr-tensorflow-log with the following report:
+As well as the logging board on wandb https://wandb.ai/thibault-neveu/detr-tensorflow-log and this report:
 
 - 🚀 [Finetuning DETR on Tensorflow - A step by step guide](https://wandb.ai/thibault-neveu/detr-tensorflow-log/reports/Finetuning-DETR-on-Tensorflow-A-step-by-step-tutorial--VmlldzozOTYyNzQ)
 
@@ -83,7 +83,7 @@ The result is not the same as reported in the paper because the evaluation is ru
 
 ## Finetune on your dataset
 
-To fine-tune the model on a new dataset, we must remove the last layers that predict the box class and positions.
+To fine-tune the model on a new dataset we siply need to set the number of class to detect in our new dataset (**nb_class**). The method will remove the last layers that predict the box class&positions and add new layers to finetune.
 
 ```python
 # Load the pretrained model
@@ -99,7 +99,7 @@ optimzers = setup_optimizers(detr, config
 # Train the model
 training.fit(detr, train_dt, optimzers, config, epoch_nb, class_names)
 ```
-The following commands gives an example to finetune the model on a new dataset (VOC) and (The Hard hat dataset) with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used for logging the training into wandb. 
+The following commands gives some examples to finetune the model on new datasets:  (VOC) and (The Hard hat dataset), with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used for logging the training into wandb. 
 ```
 python finetune_voc.py --datadir /path/to/VOCdevkit/VOC2012 --batch_size 8 --target_batch 32  --log
 ```

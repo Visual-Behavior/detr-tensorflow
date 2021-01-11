@@ -104,7 +104,7 @@ The following commands gives some examples to finetune the model on new datasets
 python finetune_voc.py --datadir /path/to/VOCdevkit/VOC2012 --batch_size 8 --target_batch 32  --log
 ```
 ```
-python  finetune_hardhat.py --datadir /home/thibault/data/hardhat/ --batch_size 8 --target_batch 32 --log
+python  finetune_hardhat.py --datadir /path/to/hardhat/dataset --batch_size 8 --target_batch 32 --log
 ```
 
 

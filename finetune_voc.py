@@ -67,9 +67,10 @@ def run_finetuning(config):
     # Load the model with the new layers to finetune
     detr = build_model(config)
 
-    # Load the training and validation dataset
-    train_dt, class_names = load_voc_dataset("train", VOC_CLASS_NAME, config.batch_size, config, augmentation=True)
-    valid_dt, _ = load_voc_dataset("val", VOC_CLASS_NAME, 1, config, augmentation=False)
+    # Load the training and validation dataset (for the purpose of this example we're gonna load the training
+    # as the validation, but in practise you should have different folder loader for the training and the validation)
+    train_dt, class_names = load_voc_dataset(config,  config.batch_size, augmentation=True)
+    valid_dt, _ = load_voc_dataset(config, 1, augmentation=False)
 
     # Train/finetune the transformers only
     config.train_backbone = tf.Variable(False)

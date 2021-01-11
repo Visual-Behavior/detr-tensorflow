@@ -21,7 +21,7 @@ VOC_CLASS_NAME = [
 
 def load_voc_labels(img_id, class_names, voc_dir, augmentation, config):
 
-    anno_path = os.path.join(voc_dir, 'Annotations', img_id + '.xml')
+    anno_path = os.path.join(voc_dir, config.data.ann_dir, img_id + '.xml')
     objects = ET.parse(anno_path).findall('object')
     size = ET.parse(anno_path).find('size')
     width = float(size.find("width").text)
@@ -55,10 +55,10 @@ def load_voc_labels(img_id, class_names, voc_dir, augmentation, config):
     return t_bbox, t_class
 
 
-def load_voc_from_id(img_id, class_names, voc_dir, augmentation, config):
+def load_voc_from_id(img_id, class_names, voc_dir, augmentation, config, img_dir):
     img_id = str(img_id.decode())
     # Load image
-    img_path = os.path.join(voc_dir, 'JPEGImages', img_id + '.jpg')
+    img_path = os.path.join(voc_dir, config.data.img_dir, img_id + '.jpg')
     image = imageio.imread(img_path)
     # Load labels
     t_bbox, t_class = load_voc_labels(img_id, class_names, voc_dir, augmentation, config)
@@ -76,18 +76,37 @@ def load_voc_from_id(img_id, class_names, voc_dir, augmentation, config):
     return (image, t_bbox, t_class)
 
 
-def load_voc_dataset(train_val, class_names, batch_size, config, augmentation=False):
+def load_voc_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_file=None, img_dir=None):
     """
     """
+    ann_dir = config.data.ann_dir if ann_dir is None else ann_dir
+    ann_file = config.data.ann_file if ann_file is None else ann_file
+    img_dir = config.data.img_dir if img_dir is None else img_dir
+
     # Set the background class to 0
     config.background_class = 0
-    class_names = ["back"] + class_names
 
-    image_dir = os.path.join(config.datadir, 'JPEGImages')
-    anno_dir = os.path.join(config.datadir, 'Annotations')
+    image_dir = os.path.join(config.data.data_dir, img_dir)
+    anno_dir = os.path.join(config.data.data_dir, ann_dir)
+    # ids lists
+    ids = list(map(lambda x: x[:-4], os.listdir(image_dir)))
+
+    # Retrieve the class names in the dataset
+    class_names = ['back']
+    for img_id in ids:
+        anno_path = os.path.join(config.data.data_dir, anno_dir, img_id + '.xml')
+        for obj in ET.parse(anno_path).findall('object'):
+            # Open bbox and retrieve info
+            name = obj.find('name').text.lower().strip()
+            if name not in class_names:
+                try: # Faster than checking
+                    class_names[name]
+                except:
+                    class_names.append(name)
+
     ids = list(map(lambda x: x[:-4], os.listdir(image_dir)))
     
-    ids = ids[:int(len(ids) * 0.75)] if train_val == "train" else ids[int(len(ids) * 0.75):]
+    #ids = ids[:int(len(ids) * 0.75)] if train_val == "train" else ids[int(len(ids) * 0.75):]
     # Shuffle all the dataset
     shuffle(ids)
 
@@ -96,7 +115,7 @@ def load_voc_dataset(train_val, class_names, batch_size, config, augmentation=Fa
     dataset = dataset.shuffle(1000)
     # Retrieve img and labels
     dataset = dataset.map(lambda idx: processing.numpy_fc(idx, load_voc_from_id, 
-        class_names=class_names, voc_dir=config.datadir, augmentation=augmentation, config=config)
+        class_names=class_names, voc_dir=config.data.data_dir, augmentation=augmentation, config=config, img_dir=img_dir)
     , num_parallel_calls=tf.data.experimental.AUTOTUNE)
     # Filter labels to be sure to keep only sample with at least one bbox
     dataset = dataset.filter(lambda imgs, tbbox, tclass: tf.shape(tbbox)[0] > 0)

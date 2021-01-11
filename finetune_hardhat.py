@@ -49,8 +49,10 @@ def run_finetuning(config):
     detr = build_model(config)
 
     # Load the training and validation dataset and exclude the person class
-    train_dt, class_names = load_tfcsv_dataset("train", config.batch_size, config, augmentation=True, exclude=["person"])
-    valid_dt, _ = load_tfcsv_dataset("test", 4, config, augmentation=False, exclude=["person"])
+    train_dt, class_names = load_tfcsv_dataset(
+        config, config.batch_size, augmentation=True, exclude=["person"], ann_file="train/_annotations.csv", img_dir="train")
+    valid_dt, _ = load_tfcsv_dataset(
+        config, 4, augmentation=False, exclude=["person"], ann_file="test/_annotations.csv", img_dir="test")
 
     # Train/finetune the transformers only
     config.train_backbone = tf.Variable(False)

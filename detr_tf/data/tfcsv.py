@@ -9,9 +9,9 @@ from .import processing
 from .transformation import detr_transform
 from .. import bbox
 
-def load_data_from_index(index, class_names, filenames, train_val, anns, config, augmentation):
+def load_data_from_index(index, class_names, filenames, anns, config, augmentation, img_dir):
     # Open the image
-    image = imageio.imread(os.path.join(config.datadir, f"{train_val}", filenames[index]))
+    image = imageio.imread(os.path.join(config.data.data_dir, img_dir, filenames[index]))
     # Select all the annotatiom (bbox and class) on this image
     image_anns = anns[anns["filename"] == filenames[index]]    
     
@@ -35,16 +35,25 @@ def load_data_from_index(index, class_names, filenames, train_val, anns, config,
     return image.astype(np.float32), t_bbox.astype(np.float32), np.expand_dims(t_class, axis=-1).astype(np.int64)
 
 
-def load_tfcsv_dataset(train_val, batch_size, config, augmentation=False, exclude=[]):
+def load_tfcsv_dataset(config, batch_size, augmentation=False, exclude=[], ann_dir=None, ann_file=None, img_dir=None):
     """ Load the hardhat dataset
     """
-    anns = pd.read_csv(os.path.join(config.datadir, f'{train_val}/_annotations.csv'))
+    ann_dir = config.data.ann_dir if ann_dir is None else ann_dir
+    ann_file = config.data.ann_file if ann_file is None else ann_file
+    img_dir = config.data.img_dir if img_dir is None else img_dir
+
+    anns = pd.read_csv(os.path.join(config.data.data_dir, ann_file))
     for name  in exclude:
         anns = anns[anns["class"] != name]
 
     unique_class = anns["class"].unique()
     unique_class.sort()
+    
+
+    # Set the background class to 0
+    config.background_class = 0
     class_names = ["background"] + unique_class.tolist()
+
 
     filenames = anns["filename"].unique().tolist()
     indexes = list(range(0, len(filenames)))
@@ -53,7 +62,7 @@ def load_tfcsv_dataset(train_val, batch_size, config, augmentation=False, exclud
     dataset = tf.data.Dataset.from_tensor_slices(indexes)
     dataset = dataset.map(lambda idx: processing.numpy_fc(
         idx, load_data_from_index, 
-        class_names=class_names, filenames=filenames, train_val=train_val, anns=anns, config=config, augmentation=augmentation)
+        class_names=class_names, filenames=filenames, anns=anns, config=config, augmentation=augmentation, img_dir=img_dir)
     ,num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
 

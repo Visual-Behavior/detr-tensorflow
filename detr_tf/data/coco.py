@@ -57,13 +57,13 @@ def get_coco_labels(coco, img_id, image_shape, augmentation):
     return bbox.astype(np.float32), t_class.astype(np.int32), crowd_bbox
 
 
-def get_coco_from_id(coco_id, coco_dir, coco, train_val, augmentation, config):
+def get_coco_from_id(coco_id, coco, augmentation, config, img_dir):
     # Load imag
     img = coco.loadImgs([coco_id])[0]
     # Load image
-    data_type = "train2017" if train_val == "train" else "val2017"
+    #data_type = "train2017" if train_val == "train" else "val2017"
     filne_name = img['file_name']
-    image_path = f"{coco_dir}/{data_type}/{filne_name}"
+    image_path = os.path.join(img_dir, filne_name) #f"{config.}/{data_type}/{filne_name}"
     image = imageio.imread(image_path)
     # Graycale to RGB if needed
     if len(image.shape) == 2: image = gray2rgb(image)
@@ -81,15 +81,15 @@ def get_coco_from_id(coco_id, coco_dir, coco, train_val, augmentation, config):
     return image, t_bbox, t_class, is_crowd
 
 
-def load_coco_dataset(train_val, batch_size, config, augmentation=False):
+def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_file=None, img_dir=None):
     """ Load a coco dataset
     """
-    # Set the coco background class on the config
-    config.background_class = 91
+    ann_dir = config.data.ann_dir if ann_dir is None else ann_dir
+    ann_file = config.data.ann_file if ann_file is None else ann_file
+    img_dir = config.data.img_dir if img_dir is None else img_dir
 
-    # Open annotation file and setup the coco object
-    data_type = "train2017" if train_val == "train" else "val2017"
-    ann_file = f"{config.datadir}/annotations/instances_{data_type}.json"
+
+
     coco = COCO(ann_file)
 
     # Extract CLASS names
@@ -112,7 +112,7 @@ def load_coco_dataset(train_val, batch_size, config, augmentation=False):
     # Retrieve img and labels
     outputs_types=(tf.float32, tf.float32, tf.int64, tf.int64)
     dataset = dataset.map(lambda idx: processing.numpy_fc(
-        idx, get_coco_from_id, outputs_types=outputs_types, coco_dir=config.datadir, coco=coco, train_val=train_val, augmentation=augmentation, config=config)
+        idx, get_coco_from_id, outputs_types=outputs_types, coco=coco, augmentation=augmentation, config=config, img_dir=img_dir)
     , num_parallel_calls=tf.data.experimental.AUTOTUNE)
     dataset = dataset.filter(lambda imgs, tbbox, tclass, iscrowd: tf.shape(tbbox)[0] > 0 and iscrowd != 1)
     dataset = dataset.map(lambda imgs, tbbox, tclass, iscrowd: (imgs, tbbox, tclass), num_parallel_calls=tf.data.experimental.AUTOTUNE)

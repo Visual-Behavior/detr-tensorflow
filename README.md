@@ -68,11 +68,15 @@ As well as the logging board on wandb https://wandb.ai/thibault-neveu/detr-tenso
 
 ## Evaluation
 
-Run the following to evaluate the model using the pre-trained weights:
+Run the following to evaluate the model using the pre-trained weights. 
+- **data_dir** is your coco dataset folder
+- **img_dir** is the image folder relative to the data_dir
+- **ann_file** is the validation annotation file relative to the data_dir
 
+Checkout ✍ [DETR Tensorflow - How to load a dataset.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/How%20to%20load%20a%20dataset.ipynb) for more information about the supported dataset ans their usage.
 
 ```
-python eval.py --datadir /path/to/coco
+python eval.py --data_dir /path/to/coco/dataset --img_dir val2017 --ann_file annotations/instances_val2017.json
 ```
 
 Outputs:
@@ -99,30 +103,44 @@ detr = get_detr_model(config, include_top=False, nb_class=3, weights="detr", num
 detr.summary()
 
 # Load your dataset
-train_dt, class_names = load_tfcsv_dataset("train", config.batch_size, config, augmentation=True)
+train_dt, class_names = load_tfcsv_dataset(config, config.batch_size, augmentation=True)
 
 # Setup the optimziers and the trainable variables
-optimzers = setup_optimizers(detr, config
+optimzers = setup_optimizers(detr, config)
 
 # Train the model
 training.fit(detr, train_dt, optimzers, config, epoch_nb, class_names)
 ```
-The following commands gives some examples to finetune the model on new datasets:  (VOC) and (The Hard hat dataset), with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used for logging the training into wandb. 
+The following commands gives some examples to finetune the model on new datasets:  (Pacal VOC) and (The Hard hat dataset), with a real ```batch_size``` of 8 and a virtual ```target_batch``` size (gradient aggregate) of 32. ```--log``` is used for logging the training into wandb. 
+
+- **data_dir** is your voc dataset folder
+- **img_dir** is the image folder relative to the data_dir
+- **ann_file** is the validation annotation file relative to the data_dir
+
 ```
-python finetune_voc.py --datadir /path/to/VOCdevkit/VOC2012 --batch_size 8 --target_batch 32  --log
+python finetune_voc.py --data_dir /home/thibault/data/VOCdevkit/VOC2012 --img_dir JPEGImages --ann_dir Annotations --batch_size 8 --target_batch 32  --log
+
 ```
+- **data_dir** is the hardhatcsv dataset folder
+- **img_dir** and  **ann_file** set in the training file to load the training and validation differently
+
+Checkout ✍ [DETR Tensorflow - How to load a dataset.ipynb](https://github.com/Visual-Behavior/detr-tensorflow/blob/main/notebooks/How%20to%20load%20a%20dataset.ipynb) for more information about the supported dataset ans their usage.
+
 ```
-python  finetune_hardhat.py --datadir /path/to/hardhat/dataset --batch_size 8 --target_batch 32 --log
+python  finetune_hardhat.py --data_dir /home/thibault/data/hardhat --batch_size 8 --target_batch 32 --log
 ```
 
 ## Training
 
 (Multi GPU training comming soon)
 
-```
-python train_coco.py --datadir /path/to/COCO --batch_size 8  --target_batch 32 --log
-```
 
+- **data_dir** is the coco dataset folder
+- **img_dir** and  **ann_file** set in the training file to load the training and validation differently.
+
+```
+python train_coco.py --data_dir /path/to/COCO --batch_size 8  --target_batch 32 --log
+```
 
 ## Inference
 

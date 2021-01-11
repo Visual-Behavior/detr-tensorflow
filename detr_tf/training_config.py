@@ -1,5 +1,6 @@
 import tensorflow as tf
 import argparse
+import os
 
 
 def training_config_parser():
@@ -8,7 +9,11 @@ def training_config_parser():
     parser = argparse.ArgumentParser()
 
     # Dataset info
-    parser.add_argument("--datadir",  type=str, required=False, help="/path/to/the/dataset")
+    parser.add_argument("--data_dir",  type=str, required=False, help="Path to the dataset directory")
+    parser.add_argument("--img_dir",  type=str, required=False, help="Image directory relative to data_dir")
+    parser.add_argument("--ann_file",  type=str, required=False, help="Annotation file relative to data_dir")
+    parser.add_argument("--ann_dir",  type=str, required=False, help="Annotation directory relative to data_dir")
+
     parser.add_argument("--background_class",  type=int, required=False, default=0, help="Default background class")
 
     # What to train
@@ -38,7 +43,8 @@ class TrainingConfig():
     def __init__(self):
 
         # Dataset info
-        self.datadir = None
+        self.data_dir, self.img_dir, self.ann_dir, self.ann_file = None, None, None, None
+        self.data = DataConfig(data_dir=None, img_dir=None, ann_file=None, ann_dir=None)
         self.background_class = 0
         self.image_size = 376, 672
 
@@ -85,8 +91,25 @@ class TrainingConfig():
                 getattr(self, key).assign(args[key])
             else:
                 setattr(self, key, args[key])
+        
+        # Set the config on the data class
 
 
+        self.data = DataConfig(
+            data_dir=self.data_dir,
+            img_dir=self.img_dir,
+            ann_file=self.ann_file,
+            ann_dir=self.ann_dir
+        )
+
+
+class DataConfig():
+
+    def __init__(self, data_dir=None, img_dir=None, ann_file=None, ann_dir=None):
+        self.data_dir = data_dir
+        self.img_dir = os.path.join(data_dir, img_dir) if data_dir is not None and img_dir is not None else None
+        self.ann_file = os.path.join(self.data_dir, ann_file) if ann_file is not None else None
+        self.ann_dir = os.path.join(self.data_dir, ann_dir) if ann_dir is not None else None
 
 
 if __name__ == "__main__":

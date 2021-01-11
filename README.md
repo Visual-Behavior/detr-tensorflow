@@ -11,8 +11,6 @@ Tensorflow implementation of DETR : Object Detection with Transformers, includin
 * [6. Acknowledgement](#acknowledgement)
 
 
-Inference
-
 <b>DETR paper:</b> https://arxiv.org/pdf/2005.12872.pdf <br>
 <b>Torch implementation: https://github.com/facebookresearch/detr</b>
 

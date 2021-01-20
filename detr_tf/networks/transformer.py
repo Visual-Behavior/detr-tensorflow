@@ -317,7 +317,7 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         attn_output_weights = tf.matmul(WQ, WK, transpose_b=True)
 
         if attn_mask is not None:
-            ann_output_weights += attn_mask
+            attn_output_weights += attn_mask
 
         """
         if key_padding_mask is not None:

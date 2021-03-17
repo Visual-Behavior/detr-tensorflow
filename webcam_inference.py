@@ -2,13 +2,11 @@ import tensorflow as tf
 import numpy as np
 import cv2
 
-
 from detr_tf.training_config import TrainingConfig, training_config_parser
 from detr_tf.networks.detr import get_detr_model
 from detr_tf.data import processing
 from detr_tf.data.coco import COCO_CLASS_NAME
 from detr_tf.inference import get_model_inference, numpy_bbox_to_image
-
 
 @tf.function
 def run_inference(model, images, config):
@@ -57,5 +55,5 @@ if __name__ == "__main__":
     detr = get_detr_model(config, include_top=True, weights="detr")
     config.background_class = 91
 
-    # RUn webcam inference
+    # Run webcam inference
     run_webcam_inference(detr)

@@ -78,6 +78,7 @@ def get_coco_from_id(coco_id, coco, augmentation, config, img_dir):
     image = image.astype(np.float32)
     t_bbox = t_bbox.astype(np.float32)
     t_class = t_class.astype(np.int64)
+    is_crowd = np.array(is_crowd, dtype=np.int64)
     return image, t_bbox, t_class, is_crowd
 
 

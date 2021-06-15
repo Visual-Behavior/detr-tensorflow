@@ -19,9 +19,9 @@ VOC_CLASS_NAME = [
     'sheep', 'sofa', 'train', 'tvmonitor'
 ]
 
-def load_voc_labels(img_id, class_names, voc_dir, augmentation, config):
+def load_voc_labels(img_id, class_names, voc_dir, ann_dir, augmentation, config):
 
-    anno_path = os.path.join(voc_dir, config.data.ann_dir, img_id + '.xml')
+    anno_path = os.path.join(voc_dir, ann_dir, img_id + '.xml')
     objects = ET.parse(anno_path).findall('object')
     size = ET.parse(anno_path).find('size')
     width = float(size.find("width").text)
@@ -55,13 +55,13 @@ def load_voc_labels(img_id, class_names, voc_dir, augmentation, config):
     return t_bbox, t_class
 
 
-def load_voc_from_id(img_id, class_names, voc_dir, augmentation, config, img_dir):
+def load_voc_from_id(img_id, class_names, voc_dir, ann_dir, augmentation, config, img_dir):
     img_id = str(img_id.decode())
     # Load image
-    img_path = os.path.join(voc_dir, config.data.img_dir, img_id + '.jpg')
+    img_path = os.path.join(voc_dir, img_dir, img_id + '.jpg')
     image = imageio.imread(img_path)
     # Load labels
-    t_bbox, t_class = load_voc_labels(img_id, class_names, voc_dir, augmentation, config)
+    t_bbox, t_class = load_voc_labels(img_id, class_names, voc_dir, ann_dir, augmentation, config)
     # Apply augmentations
     if augmentation is not None:
         image, t_bbox, t_class = transformation.detr_transform(image, t_bbox,  t_class, config, augmentation)
@@ -77,7 +77,25 @@ def load_voc_from_id(img_id, class_names, voc_dir, augmentation, config, img_dir
 
 
 def load_voc_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_file=None, img_dir=None):
-    """
+    """ Load a VOC dataset
+
+    Parameters
+    ----------
+    config: TrainingConfig
+        Instance of TrainingConfig
+    batch_size: int
+        Size of the desired batch size
+    augmentation: bool
+        Apply augmentations on the training data
+    ann_dir: str
+        Path to the coco dataset
+        If None, will be equal to config.data.ann_dir
+    ann_file: str
+        Path to the ann_file relative to the ann_dir
+        If None, will be equal to config.data.ann_file
+    img_dir: str
+        Path to the img_dir relative to the data_dir
+        If None, will be equal to config.data.img_dir
     """
     ann_dir = config.data.ann_dir if ann_dir is None else ann_dir
     ann_file = config.data.ann_file if ann_file is None else ann_file
@@ -115,7 +133,7 @@ def load_voc_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_f
     dataset = dataset.shuffle(1000)
     # Retrieve img and labels
     dataset = dataset.map(lambda idx: processing.numpy_fc(idx, load_voc_from_id, 
-        class_names=class_names, voc_dir=config.data.data_dir, augmentation=augmentation, config=config, img_dir=img_dir)
+        class_names=class_names, voc_dir=config.data.data_dir, ann_dir=ann_dir, augmentation=augmentation, config=config, img_dir=img_dir)
     , num_parallel_calls=tf.data.experimental.AUTOTUNE)
     # Filter labels to be sure to keep only sample with at least one bbox
     dataset = dataset.filter(lambda imgs, tbbox, tclass: tf.shape(tbbox)[0] > 0)

@@ -28,8 +28,14 @@ def numpy_fc(idx, fc, outputs_types=(tf.float32, tf.float32, tf.int64), **params
     Call a numpy function on each given ID (`idx`) and load the associated image and labels (bbbox and cls)
     """
     def _np_function(_idx):
-        return fc(_idx, **params)
-    return tf.numpy_function(_np_function, [idx], outputs_types)
+        data = fc(_idx, **params)
+        return data
+
+    data = tf.numpy_function(_np_function, [idx], outputs_types)
+
+    #data = tuple(map(lambda x : tf.RaggedTensor.from_tensor(x).to_tensor(), data)) 
+
+    return data
 
 
 def pad_labels(images: tf.Tensor, t_bbox: tf.Tensor, t_class: tf.Tensor):

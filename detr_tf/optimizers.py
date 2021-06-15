@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow_addons as tfa
 
 def disable_batchnorm_training(model):
     for l in model.layers:
@@ -6,20 +7,6 @@ def disable_batchnorm_training(model):
             disable_batchnorm_training(l)
         elif isinstance(l, tf.keras.layers.BatchNormalization):
             l.trainable = False
-
-def get_transformers_trainable_variables(model, exclude=[]):
-    transformers_variables = []
-
-    # Transformers variables
-    transformers_variables = model.get_layer("detr").get_layer("transformer").trainable_variables
-
-    for layer in model.layers[2:]:
-        if layer.name not in exclude:
-            transformers_variables += layer.trainable_variables
-        else:
-            pass
-
-    return transformers_variables
 
 
 def get_backbone_trainable_variables(model):
@@ -36,11 +23,26 @@ def get_backbone_trainable_variables(model):
     return backbone_variables
 
 
-def get_nlayers_trainables_variables(model, nlayers_names):
-    nlayers_variables = []
-    for nlayer_name in nlayers_names:
-        nlayers_variables += model.get_layer(nlayer_name).trainable_variables
-    return nlayers_variables
+def get_transformers_trainable_variables(model, exclude=[]):
+    transformers_variables = []
+
+    # Transformers variables
+    transformers_variables = model.get_layer("detr").get_layer("transformer").trainable_variables
+
+    for layer in model.layers[2:]:
+        if layer.name not in exclude:
+            transformers_variables += layer.trainable_variables
+        else:
+            pass
+
+    return transformers_variables
+
+
+def get_heads_trainables_variables(model, heads_names):
+    heads_variables = []
+    for nlayer_name in heads_names:
+        heads_variables += model.get_layer(nlayer_name).trainable_variables
+    return heads_variables
 
 
 def get_trainable_variables(model, config):
@@ -49,19 +51,14 @@ def get_trainable_variables(model, config):
 
     backbone_variables = []
     transformers_variables = []
-    nlayers_variables = []
+    heads_variables = []
 
-
-    # Retrieve the gradient ofr each trainable variables
-    #if config.train_backbone:
+    # The gradient will be retrieve for each trainable variable
     backbone_variables = get_backbone_trainable_variables(model)
-    #if config.train_transformers:
-    transformers_variables = get_transformers_trainable_variables(model, exclude=config.nlayers)
-    #if config.train_nlayers:
-    nlayers_variables = get_nlayers_trainables_variables(model, config.nlayers)
+    transformers_variables = get_transformers_trainable_variables(model, exclude=config.heads)
+    heads_variables = get_heads_trainables_variables(model, config.heads)
 
-    
-    return backbone_variables, transformers_variables, nlayers_variables
+    return backbone_variables, transformers_variables, heads_variables
 
 
 def setup_optimizers(model, config):
@@ -76,59 +73,79 @@ def setup_optimizers(model, config):
         return config.transformers_lr
 
     @tf.function
-    def get_nlayers_learning_rate():
-        return config.nlayers_lr
+    def get_heads_learning_rate():
+        return config.heads_lr
+
+    @tf.function
+    def get_backbone_wd():
+        return config.backbone_lr*config.backbone_wd
+
+    @tf.function
+    def get_transformers_wd():
+        return config.transformers_lr*config.transformers_wd
+
+    @tf.function
+    def get_heads_wd():
+        return config.heads_lr*config.heads_wd
+
+
 
     # Disable batch norm on the backbone
     disable_batchnorm_training(model)
 
     # Optimizers
-    backbone_optimizer = tf.keras.optimizers.Adam(learning_rate=get_backbone_learning_rate, clipnorm=config.gradient_norm_clipping)
-    transformers_optimizer = tf.keras.optimizers.Adam(learning_rate=get_transformers_learning_rate, clipnorm=config.gradient_norm_clipping)
-    nlayers_optimizer = tf.keras.optimizers.Adam(learning_rate=get_nlayers_learning_rate, clipnorm=config.gradient_norm_clipping)
+    backbone_optimizer = tfa.optimizers.AdamW(
+        learning_rate=get_backbone_learning_rate, clipnorm=config.gradient_norm_clipping, weight_decay=get_backbone_wd
+    )
+    transformers_optimizer = tfa.optimizers.AdamW(
+        learning_rate=get_transformers_learning_rate, clipnorm=config.gradient_norm_clipping, weight_decay=get_transformers_wd
+    )
+    heads_optimizer = tfa.optimizers.AdamW(
+        learning_rate=get_heads_learning_rate, clipnorm=config.gradient_norm_clipping, weight_decay=get_heads_wd
+    )
 
     # Set trainable variables
 
-    backbone_variables, transformers_variables, nlayers_variables = [], [], []
+    backbone_variables, transformers_variables, heads_variables = [], [], []
 
     backbone_variables = get_backbone_trainable_variables(model)
-    transformers_variables = get_transformers_trainable_variables(model, exclude=config.nlayers)
-    nlayers_variables = get_nlayers_trainables_variables(model, config.nlayers)
+    transformers_variables = get_transformers_trainable_variables(model, exclude=config.heads)
+    heads_variables = get_heads_trainables_variables(model, config.heads)
 
 
     return {
         "backbone_optimizer": backbone_optimizer,
         "transformers_optimizer": transformers_optimizer,
-        "nlayers_optimizer": nlayers_optimizer,
+        "heads_optimizer": heads_optimizer,
 
         "backbone_variables": backbone_variables,
         "transformers_variables": transformers_variables,
-        "nlayers_variables": nlayers_variables,
+        "heads_variables": heads_variables,
     }
 
 
 def gather_gradient(model, optimizers, total_loss, tape, config, log):
 
-    backbone_variables, transformers_variables, nlayers_variables = get_trainable_variables(model, config)
-    trainables_variables = backbone_variables + transformers_variables + nlayers_variables
+    backbone_variables, transformers_variables, heads_variables = get_trainable_variables(model, config)
+    trainables_variables = backbone_variables + transformers_variables + heads_variables
 
     gradients = tape.gradient(total_loss, trainables_variables)
 
     # Retrieve the gradients from the tap
     backbone_gradients = gradients[:len(optimizers["backbone_variables"])]
     transformers_gradients = gradients[len(optimizers["backbone_variables"]):len(optimizers["backbone_variables"])+len(optimizers["transformers_variables"])]
-    nlayers_gradients = gradients[len(optimizers["backbone_variables"])+len(optimizers["transformers_variables"]):]
+    heads_gradients = gradients[len(optimizers["backbone_variables"])+len(optimizers["transformers_variables"]):]
 
     gradient_steps = {}
 
     gradient_steps["backbone"] = {"gradients": backbone_gradients}
     gradient_steps["transformers"] = {"gradients": transformers_gradients}
-    gradient_steps["nlayers"] = {"gradients": nlayers_gradients}
+    gradient_steps["heads"] = {"gradients": heads_gradients}
 
     
     log.update({"backbone_lr": optimizers["backbone_optimizer"]._serialize_hyperparameter("learning_rate")})
     log.update({"transformers_lr": optimizers["transformers_optimizer"]._serialize_hyperparameter("learning_rate")})
-    log.update({"nlayers_lr": optimizers["nlayers_optimizer"]._serialize_hyperparameter("learning_rate")})
+    log.update({"heads_lr": optimizers["heads_optimizer"]._serialize_hyperparameter("learning_rate")})
 
     return gradient_steps
 

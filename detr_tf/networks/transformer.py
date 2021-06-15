@@ -269,19 +269,6 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
 
 
-
-        #self.in_proj_weight = tf.Variable(
-        #    tf.zeros((in_dim, self.model_dim), dtype=tf.float32), name='in_proj_kernel')
-        #self.in_proj_bias = tf.Variable(tf.zeros((in_dim,), dtype=tf.float32),
-        #                                name='in_proj_bias')
-
-        #self.out_proj_weight = tf.Variable(
-        #    tf.zeros((self.model_dim, self.model_dim), dtype=tf.float32), name='out_proj_kernel')
-        #self.out_proj_bias = tf.Variable(
-        #    tf.zeros((self.model_dim,), dtype=tf.float32), name='out_proj_bias')
-
-
-
     def call(self, inputs, attn_mask=None, key_padding_mask=None,
              need_weights=True, training=False):
 
@@ -319,8 +306,10 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         if attn_mask is not None:
             attn_output_weights += attn_mask
 
-        """
+
         if key_padding_mask is not None:
+            key_padding_mask = tf.cast(key_padding_mask, tf.bool)
+
             attn_output_weights = tf.reshape(attn_output_weights,
                                 [batch_size, self.num_heads, target_len, source_len])
 
@@ -328,13 +317,13 @@ class MultiHeadAttention(tf.keras.layers.Layer):
             key_padding_mask = tf.expand_dims(key_padding_mask, 2)
             key_padding_mask = tf.tile(key_padding_mask, [1, self.num_heads, target_len, 1])
 
+
             #print("before attn_output_weights", attn_output_weights.shape)
             attn_output_weights = tf.where(key_padding_mask,
                                            tf.zeros_like(attn_output_weights) + float('-inf'),
                                            attn_output_weights)
             attn_output_weights = tf.reshape(attn_output_weights,
                                 [batch_size * self.num_heads, target_len, source_len])
-        """
 
 
         attn_output_weights = tf.nn.softmax(attn_output_weights, axis=-1)

@@ -118,7 +118,7 @@ class WandbSender(object):
 
         except Exception as e:
             print("compute_map error. e=", e)
-            #raise e
+            raise e
             return np.array([0.0, 0.0], np.float64)
         return np.array([0.0, 0.0], np.float64)
 

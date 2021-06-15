@@ -7,6 +7,16 @@ WEIGHT_NAME_TO_CKPT = {
         "https://storage.googleapis.com/visualbehavior-publicweights/detr/checkpoint",
         "https://storage.googleapis.com/visualbehavior-publicweights/detr/detr.ckpt.data-00000-of-00001",
         "https://storage.googleapis.com/visualbehavior-publicweights/detr/detr.ckpt.index"
+    ],
+    "deformable-detr": [
+        "https://storage.googleapis.com/visualbehavior-publicweights/deformable-detr/checkpoint",
+        "https://storage.googleapis.com/visualbehavior-publicweights/deformable-detr/deformable-detr.ckpt.data-00000-of-00001",
+        "https://storage.googleapis.com/visualbehavior-publicweights/deformable-detr/deformable-detr.ckpt.index"
+    ],
+    "deformable-detr-refine_bbox": [
+        "https://storage.googleapis.com/visualbehavior-publicweights/deformable-detr-refine_bbox/checkpoint",
+        "https://storage.googleapis.com/visualbehavior-publicweights/deformable-detr-refine_bbox/deformable-detr-refine_bbox.ckpt.data-00000-of-00001",
+        "https://storage.googleapis.com/visualbehavior-publicweights/deformable-detr-refine_bbox/deformable-detr-refine_bbox.ckpt.index"
     ]
 }
 

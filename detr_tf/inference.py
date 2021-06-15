@@ -65,23 +65,33 @@ def numpy_bbox_to_image(image, bbox_list, labels=None, scores=None, class_name=[
     return image
 
 
-def get_model_inference(m_outputs: dict, background_class, bbox_format="xy_center"):
+def get_model_inference(m_outputs: dict, background_class, bbox_format="xy_center", threshold=None):
 
-    predicted_bbox = m_outputs["pred_boxes"][0]
-    predicted_labels = m_outputs["pred_logits"][0]
+    #print('get model inference', [key for key in m_outputs])
 
-    softmax = tf.nn.softmax(predicted_labels)
-    predicted_scores = tf.reduce_max(softmax, axis=-1)
-    predicted_labels = tf.argmax(softmax, axis=-1)
+    # Detr or deformable
+    predicted_bbox = m_outputs["pred_boxes"][0] if "pred_boxes" in m_outputs else m_outputs["bbox_pred_boxes"][0]
+    predicted_labels = m_outputs["pred_logits"][0] if "pred_logits" in m_outputs else m_outputs["bbox_pred_logits"][0]
+    activation = "softmax" if "pred_boxes" in m_outputs else "sigmoid"
 
+    if activation == "softmax": # Detr
+        softmax = tf.nn.softmax(predicted_labels)
+        predicted_scores = tf.reduce_max(softmax, axis=-1)
+        predicted_labels = tf.argmax(softmax, axis=-1)
+        indices = tf.where(predicted_labels != background_class)
+        indices = tf.squeeze(indices, axis=-1)
+    else: # Deformable Detr
+        sigmoid = tf.nn.sigmoid(predicted_labels)
+        predicted_scores = tf.reduce_max(sigmoid, axis=-1)
+        predicted_labels = tf.argmax(sigmoid, axis=-1)
+        threshold = 0.1 if threshold is None else threshold
+        indices = tf.where(predicted_scores > threshold)
+        indices = tf.squeeze(indices, axis=-1)
 
-    indices = tf.where(predicted_labels != background_class)
-    indices = tf.squeeze(indices, axis=-1)
 
     predicted_scores = tf.gather(predicted_scores, indices)
     predicted_labels = tf.gather(predicted_labels, indices)
     predicted_bbox = tf.gather(predicted_bbox, indices)
-
 
     if bbox_format == "xy_center":
         predicted_bbox = predicted_bbox

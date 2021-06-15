@@ -168,7 +168,7 @@ def get_detr_model(config, include_top=False, nb_class=None, weights=None, tf_ba
     bbox_embed_linear3 = detr.get_layer('bbox_embed_2')
     activation = detr.get_layer("re_lu")
 
-    x = backbone(image_input)
+    x, _, _, _ = backbone(image_input)
 
     # Resize the mask to the same size of the backbone outptu
     masks = tf.image.resize(image_mask, (tf.shape(x)[1], tf.shape(x)[2]), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)

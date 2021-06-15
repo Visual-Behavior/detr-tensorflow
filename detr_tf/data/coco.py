@@ -112,7 +112,7 @@ def iter_tuple_to_dict(data):
     } 
 
 
-def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_file=None, img_dir=None):
+def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_file=None, img_dir=None, shuffle=True):
     """ Load a coco dataset
 
     Parameters
@@ -132,6 +132,8 @@ def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_
     img_dir: str
         Path to the img_dir relative to the data_dir
         If None, will be equal to config.data.img_dir
+    shuffle : bool
+        Shuffle the dataset by default
     """
     ann_dir = config.data.ann_dir if ann_dir is None else ann_dir
     if ann_dir is None:
@@ -155,11 +157,13 @@ def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_
 
     # Setup the data pipeline
     img_ids = coco.getImgIds()
-    
-    #shuffle(img_ids)
+
+    if shuffle:
+        shuffle(img_ids)
     dataset = tf.data.Dataset.from_tensor_slices(img_ids)
     # Shuffle the dataset
-    #dataset = dataset.shuffle(1000)
+    if shuffle:
+        dataset = dataset.shuffle(1000)
     
     # Retrieve img and labels
     outputs_types=(tf.float32, tf.float32, tf.int64)

@@ -58,15 +58,24 @@ if __name__ == "__main__":
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
     config = TrainingConfig()
-    args = training_config_parser().parse_args()
+    parser = training_config_parser()
+    
+    # Logging
+    parser.add_argument("model", type=str, help="One of 'detr', or 'deformable-detr'")
+    args = parser.parse_args()
     config.update_from_args(args)
 
-    # Load the model with the new layers to finetune
-    #detr = get_detr_model(config, include_top=True, weights="detr")
-    #config.background_class = 91
-
-    deformable_detr = get_deformable_detr_model(config, include_top=True, weights="deformable-detr")
-    deformable_detr.summary()
+    if args.model == "detr":
+        print("Loading detr...")
+        # Load the model with the new layers to finetune
+        model = get_detr_model(config, include_top=True, weights="detr")
+        config.background_class = 91
+        use_mask = True
+    elif args.model == "deformable-detr":
+        print("Loading deformable-detr...")
+        model = get_deformable_detr_model(config, include_top=True, weights="deformable-detr")
+        model.summary()
+        use_mask = False
 
     # Run webcam inference
-    run_webcam_inference(deformable_detr, use_mask=False)
+    run_webcam_inference(model, use_mask=use_mask)

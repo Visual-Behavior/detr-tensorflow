@@ -92,7 +92,7 @@ if __name__ == "__main__":
     # Load the model with the new layers to finetune
     detr = build_model(config)
 
-    valid_dt, class_names = load_coco_dataset(config, 1, augmentation=False, shuffle=False)
+    valid_dt, class_names = load_coco_dataset(config, 1, augmentation=False, shuffle_data=False)
 
     # Run training
     eval_model(detr, config, class_names, valid_dt)

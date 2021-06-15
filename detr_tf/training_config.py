@@ -106,7 +106,7 @@ class TrainingConfig():
         """
         args = vars(args)
         for key in args:
-            if isinstance(getattr(self, key), tf.Variable):
+            if isinstance(getattr(self, key, None), tf.Variable):
                 getattr(self, key).assign(args[key])
             else:
                 setattr(self, key, args[key])

@@ -93,7 +93,8 @@ class DeformableDETR(tf.keras.Model):
         )
         self.model_dim = model_dim
 
-        layer_norm = functools.partial(tfa.layers.GroupNormalization, groups=32, epsilon=1e-05)
+        layer_norm = functools.partial(tfa.layers.GroupNormalization, groups=32, epsilon=1e-05) #tf.keras.layers.BatchNormalization
+
 
         self.input_proj_0 = tf.keras.layers.Conv2D(self.model_dim, kernel_size=1, name='input_proj/0/0', trainable=train_encoder)
         self.input_proj_gn_0 = layer_norm(name="input_proj_gn/0/1", trainable=train_encoder)

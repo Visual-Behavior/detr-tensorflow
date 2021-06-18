@@ -9,11 +9,6 @@ import onnx_graphsurgeon as gs
 from TRTEngineBuilder import TRTEngineBuilder, TRT_LOGGER
 from common import GiB
 
-MS_DEFORM_IM2COL_PLUGIN_LIB = "./detr_tensorrt/plugins/ms_deform_im2col/build/libms_deform_im2col_trt.so"
-ctypes.CDLL(MS_DEFORM_IM2COL_PLUGIN_LIB)
-trt.init_libnvinfer_plugins(TRT_LOGGER, '')
-PLUGIN_CREATORS = trt.get_plugin_registry().plugin_creator_list
-
 
 def print_graph_io(graph):
     # Print inputs:
@@ -240,6 +235,12 @@ if __name__ == "__main__":
     parser.add_argument("--verbose", action="store_true",
                         help="Print out TensorRT log of all levels")
     args = parser.parse_args()
+
+    if "deformable" in args.model:
+        MS_DEFORM_IM2COL_PLUGIN_LIB = "./detr_tensorrt/plugins/ms_deform_im2col/build/libms_deform_im2col_trt.so"
+        ctypes.CDLL(MS_DEFORM_IM2COL_PLUGIN_LIB)
+        trt.init_libnvinfer_plugins(TRT_LOGGER, '')
+        PLUGIN_CREATORS = trt.get_plugin_registry().plugin_creator_list
 
     if args.onnx_dir is None:
         args.onnx_dir = os.path.join(

@@ -15,11 +15,7 @@ from detr_tf.inference import numpy_bbox_to_image
 
 BACKGROUND_CLASS = 91 # COCO background class
 
-# Load custom plugin for deformable-detr
-MS_DEFORM_IM2COL_PLUGIN_LIB = "./detr_tensorrt/plugins/ms_deform_im2col/build/libms_deform_im2col_trt.so"
-ctypes.CDLL(MS_DEFORM_IM2COL_PLUGIN_LIB)
-trt.init_libnvinfer_plugins(TRT_LOGGER, '')
-PLUGIN_CREATORS = trt.get_plugin_registry().plugin_creator_list
+
 
 def run_inference(model: TRTExecutor, normalized_image: np.ndarray):
     model.inputs[0].host = normalized_image
@@ -63,4 +59,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--engine_path", type=str, required=True)
     args = parser.parse_args()
+    if "deformable" in args.engine_path:
+        # Load custom plugin for deformable-detr
+        MS_DEFORM_IM2COL_PLUGIN_LIB = "./detr_tensorrt/plugins/ms_deform_im2col/build/libms_deform_im2col_trt.so"
+        ctypes.CDLL(MS_DEFORM_IM2COL_PLUGIN_LIB)
+        trt.init_libnvinfer_plugins(TRT_LOGGER, '')
+        PLUGIN_CREATORS = trt.get_plugin_registry().plugin_creator_list
     main(**vars(args))

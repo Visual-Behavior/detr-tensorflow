@@ -146,7 +146,7 @@ class DeformableDETR(tf.keras.Model):
 
 class DetrClassHead(tf.keras.layers.Layer):
 
-    def __init__(self, detr, include_top, nb_class=None, refine_bbox=False, **kwargs):
+    def __init__(self, detr:DeformableDETR, include_top, nb_class=None, refine_bbox=False, **kwargs):
         """
         """
         super().__init__(name="detr_class_head", **kwargs)

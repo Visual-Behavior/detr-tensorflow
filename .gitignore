@@ -130,3 +130,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.vscode
+detr_tf/custom_ops/ms_deform_attn/ms_deform_im2col.o

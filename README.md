@@ -7,8 +7,9 @@ Tensorflow implementation of DETR : Object Detection with Transformers, includin
 * [3. Tutorials](#tutorials)
 * [4. Finetuning](#finetuning)
 * [5. Training](#training)
-* [5. inference](#inference)
-* [6. Acknowledgement](#acknowledgement)
+* [5. Inference](#inference)
+* [6. Inference with TensorRT](#inference-with-tensorrt)
+* [7. Acknowledgement](#acknowledgement)
 
 
 <b>DETR paper:</b> https://arxiv.org/pdf/2005.12872.pdf <br>
@@ -152,6 +153,82 @@ python webcam_inference.py
 
 <img src="images/webcam_detr.png" width="400"></img>
 
+## Inference with TensorRT
+
+### Requirements:
+```
+cmake >= 3.8
+TensorRT 8
+```
+To install TensorRT 8, follow [NVIDIA TensorRT official installation guide](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html).
+
+Python package requirements:
+```
+onnx
+tf2onnx
+```
+
+### Custom plugin for Deformable DETR
+Deformable DETR use a custom operation Im2Col in its Transformer layer. This operation is not supported by TensorRT so we need to build a TensorRT custom plugin from source.
+
+```
+cd detr_tensorrt/plugins/ms_deform_im2col
+mkdir build && cd build
+cmake .. \
+       -DTRT_LIB=/path/to/tensorrt/lib/
+       -DTRT_INCLUDE=/path/to/tensorrt/include/
+       -DCUDA_ARCH_SM=/your_gpu_cuda_arch/
+make -j
+```
+For more detail, see: `detr_tensorrt/plugins/ms_deform_im2col/README.txt` 
+
+Parameters:
+- `-DTRT_LIB`: Path to TensorRT lib. It could be `YOUR_TENSORRT_DIR/lib` or `/usr/lib/x86_64-linux-gnu`
+- `-DTRT_INCLUDE`: Path to TensorRT C++ include. It could be `YOUR_TENSORRT_DIR/include` or `/usr/include/x86_64-linux-gnu`
+- `-DCUDA_ARCHE_SM`: Compute capability of your NVIDIA GPU. Example: `70` for Tesla V100. Check [here](https://arnon.dk/matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/) for other GPU.
+
+### Workflow
+Tensorflow model --> ONNX --> TensorRT serialized engine
+
+#### Export Tensorflow graph to ONNX graph:
+
+For each model (detr/deformable-detr), we have:
+```
+python3 detr_tensorrt/export_onnx.py MODEL_NAME 
+       [--input_shape H W] 
+       [--save_to DIR_TO_SAVE_ONNX_FILE]
+```
+Parameters:
+- `--input_shape`: image height and width, default: 1280 1920
+- `--save_to`: directory that onnx file will be saved to. Default: `./weights/MODEL_NAME/MODEL_NAME_trt/`
+
+#### Convert ONNX model to TensorRT serialized engine:
+```
+python3 detr_tensorrt/onnx2engine.py MODEL_NAME
+       [--precision PRECISION]
+       [--onnx_dir ONNX_DIR]
+       [--verbose]
+```
+Parameters:
+- `--precision`: precision of model weights: FP32, FP16, MIX. MIX precision will let TensorRT the freedom to optimize weights as either FP32 or FP16. In most cases, the inference time between FP16 and MIX has no big difference.
+- `--onnx_dir`: directory containing the ONNX file to be converted to TensorRT engine. The required ONNX file must be named `MODEL_NAME.onnx`. Default: `./weights/MODEL_NAME/MODEL_NAME_trt/`
+- `--verbose`: Print out TensorRT log of all levels
+
+The TensorRT serialized engine will be saved in `ONNX_DIR/MODEL_NAME_PRECISION.engine`
+
+### Run inference
+An example of inference with a test image: `images/test.jpeg`
+
+```
+python tensorrt_inference.py --engine_path ENGINE_PATH
+```
+
+Inference time in milisecond:
+|               | DETR | Deformable DETR |
+|---------------|------|-----------------|
+| Tensorflow    | 100  | 160             |
+| TensorRT FP32 | 60   | 100             |
+| TensorRT FP16 | 27   | 60              |
 
 ## Acknowledgement
 

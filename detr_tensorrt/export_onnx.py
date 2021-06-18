@@ -56,32 +56,33 @@ if __name__ == "__main__":
     config = TrainingConfig()
     parser = training_config_parser()
     parser.add_argument("model", type=str, default="deformable-detr", help="One of 'detr', or 'deformable-detr'")
-    parser.add_argument("--input_shape", type=int, default=[1280, 1920, 3], nargs=3, help="ex: 1280 1920 3")
+    parser.add_argument("--input_shape", type=int, default=[1280, 1920], nargs=2, help="ex: 1280 1920 3")
     parser.add_argument('--save_to', type=str, default=None, help="Path to save ONNX file")
     args = parser.parse_args()
     config.update_from_args(args)
+
+    args.input_shape.append(3) # C = 3
 
     if args.save_to is None:
         args.save_to = os.path.join("weights", args.model, args.model + "_trt")
 
     # === Load model
     model = get_model(config, args)
-    print("hold")
-    # # === Save model to pb file
-    # if not os.path.isdir(args.save_to):
-    #     os.makedirs(args.save_to)
+    # === Save model to pb file
+    if not os.path.isdir(args.save_to):
+        os.makedirs(args.save_to)
 
-    # # === Save onnx file
-    # input_spec = [tf.TensorSpec.from_tensor(tensor) for tensor in model.input]
-    # # print(input_spec)
-    # output_path = os.path.join(args.save_to, args.model + ".onnx")
-    # model_proto, _ = tf2onnx.convert.from_keras(
-    #     model, input_signature=input_spec, 
-    #     opset=13, output_path=output_path)
-    # print("===== Inputs =======")
-    # [print(n.name) for n in model_proto.graph.input]
-    # print("===== Outputs =======")
-    # [print(n.name) for n in model_proto.graph.output]
+    # === Save onnx file
+    input_spec = [tf.TensorSpec.from_tensor(tensor) for tensor in model.input]
+    # print(input_spec)
+    output_path = os.path.join(args.save_to, args.model + ".onnx")
+    model_proto, _ = tf2onnx.convert.from_keras(
+        model, input_signature=input_spec, 
+        opset=13, output_path=output_path)
+    print("===== Inputs =======")
+    [print(n.name) for n in model_proto.graph.input]
+    print("===== Outputs =======")
+    [print(n.name) for n in model_proto.graph.output]
 
 
     

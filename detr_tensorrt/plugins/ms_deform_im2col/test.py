@@ -4,6 +4,7 @@ import numpy as np
 import os
 import ctypes
 import re
+import time
 
 from surroundnet.detr.tensorrt.TRTExecutor import TRTExecutor
 
@@ -37,11 +38,12 @@ def build_test_engine(input_shape, dtype=trt.float32):
     num_level = input_shape["flatten_sampling_loc"][3]
 
     with trt.Builder(TRT_LOGGER) as builder, builder.create_network(EXPLICIT_BATCH) as network:
+        builder.max_batch_size = 1
         config = builder.create_builder_config()
         config.max_workspace_size = GiB(5)
-        config.set_flag(trt.BuilderFlag.FP16)
-        config.set_flag(trt.BuilderFlag.STRICT_TYPES)
-        builder.max_batch_size = 1
+        if dtype == trt.float16:
+            config.set_flag(trt.BuilderFlag.FP16)
+            config.set_flag(trt.BuilderFlag.STRICT_TYPES)
 
         input_flatten_value = network.add_input(
             name="input_flatten_value", dtype=dtype, shape=input_shape["flatten_value"])
@@ -106,7 +108,12 @@ if __name__ == "__main__":
 
     trt_model.execute()
 
+    N = 1000
+    tic = time.time()
+    [trt_model.execute() for i in range(N)]
+    toc = time.time()
+
     diff = test_tensors["output"] - trt_model.outputs[0].host
     print(np.abs(diff).mean())
-
+    print(f"Execution time: {(toc - tic)/N*1000} ms")
     

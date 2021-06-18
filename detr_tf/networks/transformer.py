@@ -306,24 +306,23 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         if attn_mask is not None:
             attn_output_weights += attn_mask
 
+        # Comment out this code block when export to ONNX and TRT engine
+        # if key_padding_mask is not None:
+        #     attn_output_weights = tf.reshape(attn_output_weights,
+        #                         [batch_size, self.num_heads, target_len, source_len])
 
-        if key_padding_mask is not None:
-            key_padding_mask = tf.cast(key_padding_mask, tf.bool)
+        #     key_padding_mask = tf.expand_dims(key_padding_mask, 1)
+        #     key_padding_mask = tf.expand_dims(key_padding_mask, 2)
+        #     key_padding_mask = tf.tile(key_padding_mask, [1, self.num_heads, target_len, 1])
 
-            attn_output_weights = tf.reshape(attn_output_weights,
-                                [batch_size, self.num_heads, target_len, source_len])
+        #     key_padding_mask = tf.cast(key_padding_mask, tf.bool)
 
-            key_padding_mask = tf.expand_dims(key_padding_mask, 1)
-            key_padding_mask = tf.expand_dims(key_padding_mask, 2)
-            key_padding_mask = tf.tile(key_padding_mask, [1, self.num_heads, target_len, 1])
-
-
-            #print("before attn_output_weights", attn_output_weights.shape)
-            attn_output_weights = tf.where(key_padding_mask,
-                                           tf.zeros_like(attn_output_weights) + float('-inf'),
-                                           attn_output_weights)
-            attn_output_weights = tf.reshape(attn_output_weights,
-                                [batch_size * self.num_heads, target_len, source_len])
+        #     #print("before attn_output_weights", attn_output_weights.shape)
+        #     attn_output_weights = tf.where(key_padding_mask,
+        #                                 tf.zeros_like(attn_output_weights) + float('-inf'),
+        #                                 attn_output_weights)
+        #     attn_output_weights = tf.reshape(attn_output_weights,
+        #                         [batch_size * self.num_heads, target_len, source_len])
 
 
         attn_output_weights = tf.nn.softmax(attn_output_weights, axis=-1)

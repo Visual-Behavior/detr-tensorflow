@@ -25,7 +25,7 @@ def run_inference(model: TRTExecutor, normalized_image: np.ndarray):
     model.inputs[0].host = normalized_image
     model.execute()
     m_outputs = {out.name:out.host for out in model.outputs}
-    p_bbox, p_labels, p_scores = get_model_inference(m_outputs, BACKGROUND_CLASS, threshold=0.2)
+    p_bbox, p_labels, p_scores = get_model_inference(m_outputs, BACKGROUND_CLASS, threshold=0.4)
     return p_bbox, p_labels, p_scores
 
     

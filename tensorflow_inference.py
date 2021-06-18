@@ -22,7 +22,8 @@ def run_inference(model, images, config, use_mask=True):
     else:
         m_outputs = model(images, training=False)
 
-    predicted_bbox, predicted_labels, predicted_scores = get_model_inference(m_outputs, config.background_class, bbox_format="xy_center", threshold=0.2)
+    predicted_bbox, predicted_labels, predicted_scores = get_model_inference(
+        m_outputs, config.background_class, bbox_format="xy_center", threshold=0.4)
     return predicted_bbox, predicted_labels, predicted_scores
 
 

@@ -9,10 +9,10 @@ def GiB(val):
 
 class TRTEngineBuilder():
     """
-    Work with TensorRT 8
+    Work with TensorRT 8. Should work fine with TensorRT 7.2.3 (not tested)
     
-    Helper class to build TensorRT engine from ONNX graph file (including weights). The graph must have defined input shape.
-    For more detail, please see TensorRT Developer Guide:
+    Helper class to build TensorRT engine from ONNX graph file (including weights). 
+    The graph must have defined input shape. For more detail, please see TensorRT Developer Guide:
     https://docs.nvidia.com/deeplearning/tensorrt/developer-guide/index.html#python_topics
     """
     def __init__(self, onnx_file_path, FP16_allowed=False, INT8_allowed=False, strict_type=False, calibrator=None, logger=TRT_LOGGER):
@@ -68,10 +68,10 @@ class TRTEngineBuilder():
                     return None
                 else:
                     print("ONNX file is loaded")
-            print("Building cuda engine...")
+            print("Building engine...")
             engine = builder.build_engine(network, config)
             if engine is None:
-                Exception("TRT export engine error. Check log")
+                raise Exception("TRT export engine error. Check log")
             print("Engine built")
         return engine
 

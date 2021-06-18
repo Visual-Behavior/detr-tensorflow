@@ -46,6 +46,13 @@ def get_nodes_by_op(op_name, onnx_graph):
             nodes.append(n)
     return nodes
 
+def get_nodes_by_prefix(prefix, onnx_graph: gs.Graph):
+    nodes = []
+    for n in onnx_graph.nodes:
+        if n.name.startswith(prefix):
+            nodes.append(n)
+    return nodes
+
 
 def fix_graph_detr(graph: gs.Graph):
     # === Fix Pad 2 in Resnet backbone ===
@@ -60,12 +67,16 @@ def fix_graph_detr(graph: gs.Graph):
 
 
 def fix_graph_deformable_detr(graph: gs.Graph):
+    batch_size = graph.inputs[0].shape[0]
     # === Fix Pad 2 in Resnet backbone ===
     # TensorRT supports padding only on 2 innermost dimensions
     resnet_pad2 = get_node_by_name(
         "deformable-detr/deformable_detr/detr_core/backbone/pad2/Pad", graph)
+    unused_nodes = [resnet_pad2.i(1), resnet_pad2.i(1).i()]
     resnet_pad2.inputs[1] = gs.Constant(
         "pad2/pads_input", np.array([0, 0, 1, 1, 0, 0, 1, 1]))
+    for n in unused_nodes:
+        graph.nodes.remove(n)
 
     # ======= Add nodes for MsDeformIm2ColTRT ===========
     tf_im2col_nodes = get_nodes_by_op("MsDeformIm2col", graph)
@@ -99,6 +110,73 @@ def fix_graph_deformable_detr(graph: gs.Graph):
         n.inputs.clear()
         n.outputs.clear()
         graph.nodes.remove(n)
+
+    # ======= Handle GroupNorm by TensorRT official plugin =======
+    gn_nodes = []
+    for i in range(4):
+        gn_nodes.append(
+            get_nodes_by_prefix(
+                f"deformable-detr/deformable_detr/detr_core/input_proj_gn/{i}", graph))
+    
+    def handle_group_norm_nodes(nodes, graph:gs.Graph):
+        # Get GN name
+        gn_name = nodes[0].name[:-7]
+        # Get GN input tensors
+        
+        gn_input = nodes[0].i().inputs[0]
+        # Get gamme input
+        mul_node = None
+        for n in nodes:
+            if n.name.endswith("/mul"):
+                mul_node = n
+        assert mul_node is not None
+        gamma_input = gs.Constant(
+            name=gn_name + "gamma:0",
+            values=mul_node.inputs[1].values.reshape((batch_size, -1)))
+        # Get beta input
+        sub_node = None
+        for n in nodes:
+            if n.name.endswith("batchnorm/sub"):
+                sub_node = n
+        assert sub_node is not None
+        beta_input = gs.Constant(
+            name=gn_name+"beta:0",
+            values=sub_node.inputs[0].values.reshape((batch_size, -1)))
+        # Get output tensor
+        gn_output = nodes[-1].outputs[0]
+        # print(gn_output)
+        # Add new plugin node to graph
+        graph.layer(
+            name=gn_name + "group_norm_trt",
+            inputs=[gn_input, gamma_input, beta_input],
+            outputs=[gn_output],
+            op="GroupNormalizationPlugin",
+            attrs={
+                "eps": 1e-5,
+                "num_groups": 32
+            })
+        # Detach gn_output from existing graph
+        gn_out_flatten = gn_output.outputs[0]
+        gn_out_flatten.inputs.pop(0)
+        # Add Transpose
+        transposed_tensor = graph.layer(
+            name=gn_name+"gn_out_transpose",
+            inputs=[gn_output],
+            outputs=[gn_name + "input_proj_flatten:0"],
+            op="Transpose",
+            attrs={"perm": [0, 2, 3, 1]}
+        )
+        gn_out_flatten.inputs.insert(0, transposed_tensor[0])
+        # Disconnect old nodes
+        nodes.insert(0, nodes[0].i()) # for clean up purpose
+        for n in nodes:
+            n.inputs.clear()
+            n.outputs.clear()
+            graph.nodes.remove(n)
+
+    for nodes in gn_nodes:
+        handle_group_norm_nodes(nodes, graph)
+        
 
     return graph
 

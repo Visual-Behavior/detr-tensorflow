@@ -30,7 +30,7 @@ import time
 def build_model(config):
     """ Build the model with the pretrained weights. In this example
     we do not add new layers since the pretrained model is already trained on coco.
-    See examples/finetuning_voc.py to add new layers.
+    See the finetuning_voc.py script see an example on how to change the number of class on the last layer.
     """
     # Load the pretrained model
     detr = get_detr_model(config, include_top=True, weights="detr")
@@ -44,8 +44,10 @@ def run_finetuning(config):
     detr = build_model(config)
 
     # Load the training and validation dataset
-    train_dt, coco_class_names = load_coco_dataset("train", config.batch_size, config, augmentation=True)
-    valid_dt, _ = load_coco_dataset("val", 1, config, augmentation=False)
+    train_dt, coco_class_names = load_coco_dataset(
+        config, config.batch_size, augmentation=True, img_dir="val2017", ann_file="annotations/instances_val2017.json")
+    valid_dt, _ = load_coco_dataset(
+        config, 1, augmentation=False, img_dir="val2017", ann_file="annotations/instances_val2017.json")
 
     # Train/finetune the transformers only
     config.train_backbone = False
@@ -56,7 +58,7 @@ def run_finetuning(config):
 
     # Run the training for 5 epochs
     for epoch_nb in range(100):
-        training.eval(detr, valid_dt, config, coco_class_names, evaluation_step=200)
+        training.eval(detr, valid_dt, config, coco_class_names, evaluation_step=100, batch_size=1)
         training.fit(detr, train_dt, optimzers, config, epoch_nb, coco_class_names)
 
 

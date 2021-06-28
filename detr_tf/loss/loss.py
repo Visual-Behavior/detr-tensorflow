@@ -19,13 +19,13 @@ def get_total_losss(losses):
     return total_loss
 
 
-def get_losses(m_outputs, t_bbox, t_class, config):
-    losses = get_detr_losses(m_outputs, t_bbox, t_class, config)
+def get_losses(m_outputs, t_bbox, t_class, config, batch_size):
+    losses = get_detr_losses(m_outputs, t_bbox, t_class, config, batch_size)
 
     # Get auxiliary loss for each auxiliary output
     if "aux" in m_outputs:
         for a, aux_m_outputs in enumerate(m_outputs["aux"]):
-            aux_losses = get_detr_losses(aux_m_outputs, t_bbox, t_class, config, suffix="_{}".format(a))
+            aux_losses = get_detr_losses(aux_m_outputs, t_bbox, t_class, config, batch_size, suffix="_{}".format(a))
             losses.update(aux_losses)
     
     # Compute the total loss
@@ -95,7 +95,7 @@ def loss_boxes(p_bbox, p_class, t_bbox, t_class, t_indices, p_indices, t_selecto
 
     return loss_giou, l1_loss
 
-def get_detr_losses(m_outputs, target_bbox, target_label, config, suffix=""):
+def get_detr_losses(m_outputs, target_bbox, target_label, config, batch_size, suffix=""):
 
     predicted_bbox = m_outputs["pred_boxes"]
     predicted_label = m_outputs["pred_logits"]
@@ -112,9 +112,10 @@ def get_detr_losses(m_outputs, target_bbox, target_label, config, suffix=""):
     t_offset = 0
     p_offset = 0
 
-    for b in range(predicted_bbox.shape[0]):
+    for b in range(batch_size):
 
         p_bbox, p_class, t_bbox, t_class = predicted_bbox[b], predicted_label[b], target_bbox[b], target_label[b]
+
         t_indices, p_indices, t_selector, p_selector, t_bbox, t_class = hungarian_matching(t_bbox, t_class, p_bbox, p_class, slice_preds=True)
 
         t_indices = t_indices + tf.cast(t_offset, tf.int64)

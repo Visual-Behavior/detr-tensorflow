@@ -100,7 +100,7 @@ def add_heads_nlayers(config, detr, nb_class):
         tf.keras.layers.Dense(256, activation="relu"),
         tf.keras.layers.Dense(4, activation="sigmoid"),
     ], name="pos_layer")
-    config.add_nlayers([cls_layer, pos_layer])
+    config.add_heads([cls_layer, pos_layer])
 
     transformer_output = detr(image_input)
     cls_preds = cls_layer(transformer_output)
@@ -139,6 +139,7 @@ def get_detr_model(config, include_top=False, nb_class=None, weights=None, tf_ba
         load_weights(detr, weights)
 
     image_input = tf.keras.Input((None, None, 3))
+    image_mask = tf.keras.Input((None, None, 1))
 
     # Backbone
     if not tf_backbone:
@@ -167,20 +168,23 @@ def get_detr_model(config, include_top=False, nb_class=None, weights=None, tf_ba
     bbox_embed_linear3 = detr.get_layer('bbox_embed_2')
     activation = detr.get_layer("re_lu")
 
-    x = backbone(image_input)
+    x, _, _, _ = backbone(image_input)
 
-    masks = tf.zeros((tf.shape(x)[0], tf.shape(x)[1], tf.shape(x)[2]), tf.bool)
+    # Resize the mask to the same size of the backbone outptu
+    masks = tf.image.resize(image_mask, (tf.shape(x)[1], tf.shape(x)[2]), method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    masks = tf.cast(masks, tf.int32)
+
     pos_encoding = position_embedding_sine(masks)
 
     hs = transformer(input_proj(x), masks, query_embed(None), pos_encoding)[0]
 
-    detr = tf.keras.Model(image_input, hs, name="detr")
+    detr = tf.keras.Model([image_input, image_mask], hs, name="detr")
     if include_top is False and nb_class is None:
         return detr
     elif include_top is False and nb_class is not None:
         return add_heads_nlayers(config, detr, nb_class) 
 
-    transformer_output = detr(image_input)
+    transformer_output = detr((image_input, masks))
 
     outputs_class = class_embed(transformer_output)
     box_ftmps = activation(bbox_embed_linear1(transformer_output))
@@ -201,5 +205,5 @@ def get_detr_model(config, include_top=False, nb_class=None, weights=None, tf_ba
             "pred_boxes": pred_boxes
         })
 
-    return tf.keras.Model(image_input, output, name="detr_finetuning")
+    return tf.keras.Model([image_input, image_mask], output, name="detr_finetuning")
 

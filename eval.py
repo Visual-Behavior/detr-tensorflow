@@ -14,6 +14,11 @@ from detr_tf.networks.detr import get_detr_model
 from detr_tf.bbox import xcycwh_to_xy_min_xy_max, xcycwh_to_yx_min_yx_max
 from detr_tf.inference import numpy_bbox_to_image
 from detr_tf.training_config import TrainingConfig, training_config_parser
+from detr_tf.training import handle_data
+
+tf.random.set_seed(40)
+np.random.seed(40)
+
 
 
 def build_model(config):
@@ -27,6 +32,12 @@ def build_model(config):
     return detr
 
 
+#@tf.function
+def run_model(data, model):
+    n_data = handle_data(data)
+    return model((n_data["images"], n_data["mask"]))
+
+
 def eval_model(model, config, class_names, valid_dt):
     """ Run evaluation
     """
@@ -38,18 +49,26 @@ def eval_model(model, config, class_names, valid_dt):
     }
     it = 0
 
-    for images, target_bbox, target_class in valid_dt:
+    for data in valid_dt:
+        data = valid_dt.itertuple2dict(data)
+
         # Forward pass
-        m_outputs = model(images)
+        m_outputs = run_model(data, model)
+        
         # Run predictions
         p_bbox, p_labels, p_scores = get_model_inference(m_outputs, config.background_class, bbox_format="yxyx")
+        
         # Remove padding
-        t_bbox, t_class = target_bbox[0], target_class[0]
-        size = tf.cast(t_bbox[0][0], tf.int32)
-        t_bbox = tf.slice(t_bbox, [1, 0], [size, 4])
+        t_bbox, t_class = data["target_bbox"][0], data["target_class"][0]
+
         t_bbox = xcycwh_to_yx_min_yx_max(t_bbox)
-        t_class = tf.slice(t_class, [1, 0], [size, -1])
         t_class = tf.squeeze(t_class, axis=-1)
+
+        # Filter undesired target
+        _filter = tf.squeeze(tf.where(t_class != -1), axis=-1)
+        t_class = tf.gather(t_class, _filter)
+        t_bbox = tf.gather(t_bbox, _filter)
+        
         # Compute map
         cal_map(p_bbox, p_labels, p_scores,  np.zeros((138, 138, len(p_bbox))), np.array(t_bbox), np.array(t_class), np.zeros((138, 138, len(t_bbox))), ap_data, iou_thresholds)
         print(f"Computing map.....{it}", end="\r")
@@ -73,7 +92,7 @@ if __name__ == "__main__":
     # Load the model with the new layers to finetune
     detr = build_model(config)
 
-    valid_dt, class_names = load_coco_dataset(config, 1, augmentation=None)
+    valid_dt, class_names = load_coco_dataset(config, 1, augmentation=False, shuffle_data=False)
 
     # Run training
     eval_model(detr, config, class_names, valid_dt)

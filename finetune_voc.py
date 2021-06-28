@@ -31,14 +31,16 @@ VOC_CLASS_NAME = [
 ]
 
 def build_model(config):
-    """ Build the model with the pretrained weights
-    and add new layers to finetune
+    """ Build the model with the pretrained weights.
+    We set include_top to False to not include the last layer of the transformer.
+    Then, `nb_class` is used to automaticly replace the lat layers by new layers with the
+    appropriate number of target class.
     """
     # Input
     image_input = tf.keras.Input((None, None, 3))
-
-    # Load the pretrained model
-    detr = get_detr_model(config, include_top=False, weights="detr", num_decoder_layers=6, num_encoder_layers=6)
+    # Load the pretrained model and replace the laster layers for this new task.
+    detr = get_detr_model(config, include_top=False, weights="detr", nb_class=len(VOC_CLASS_NAME)+1)
+    return detr
 
     # Setup the new layers
     cls_layer = tf.keras.layers.Dense(len(VOC_CLASS_NAME) + 1, name="cls_layer")
@@ -68,7 +70,7 @@ def run_finetuning(config):
     detr = build_model(config)
 
     # Load the training and validation dataset (for the purpose of this example we're gonna load the training
-    # as the validation, but in practise you should have different folder loader for the training and the validation)
+    # as the validation, but in practise you should have different folder and loader for the training and the validation)
     train_dt, class_names = load_voc_dataset(config,  config.batch_size, augmentation=True)
     valid_dt, _ = load_voc_dataset(config, 1, augmentation=False)
 
@@ -95,8 +97,8 @@ def run_finetuning(config):
             config.transformers_lr.assign(1e-4)
             config.nlayers_lr.assign(1e-3)
 
-        training.eval(detr, valid_dt, config, class_names, evaluation_step=200)
         training.fit(detr, train_dt, optimzers, config, epoch_nb, class_names)
+        training.eval(detr, valid_dt, config, class_names, evaluation_step=200)
 
 
 if __name__ == "__main__":

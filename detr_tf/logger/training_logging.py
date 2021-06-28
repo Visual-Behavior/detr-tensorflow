@@ -21,13 +21,13 @@ else:
     RAGGED = False
 
 
-def tf_send_batch_log_to_wandb(images, target_bbox, target_class,  m_outputs: dict, config, class_name=[], step=None, prefix=""): 
+def tf_send_batch_log_to_wandb(images, target_bbox, target_class,  m_outputs: dict, config, batch_size, class_name=[], step=None, prefix=""): 
 
     # Warning: In graph mode, this class is init only once. In eager mode, this class is init at each step.
     img_sender = WandbSender()
 
     predicted_bbox = m_outputs["pred_boxes"]
-    for b in range(predicted_bbox.shape[0]):
+    for b in range(batch_size):
         # Select within the batch the elements at indice b
         image = images[b]
         
@@ -67,17 +67,15 @@ def compute_map_on_batch(images, target_bbox, target_class,  m_outputs: dict, co
         # Target
         t_bbox, t_class = target_bbox[b], target_class[b]
 
-        if not RAGGED:
-            size = tf.cast(t_bbox[0][0], tf.int32)
-            t_bbox = tf.slice(t_bbox, [1, 0], [size, 4])
-            t_bbox = bbox.xcycwh_to_yx_min_yx_max(t_bbox)
-            t_class = tf.slice(t_class, [1, 0], [size, -1])
-            t_class = tf.squeeze(t_class, axis=-1)
+        #t_class = tf.slice(t_class, [1, 0], [size, -1])
+        t_bbox = bbox.xcycwh_to_yx_min_yx_max(t_bbox)
+        t_class = tf.squeeze(t_class, axis=-1)
 
         # Inference ops
         predicted_bbox, predicted_labels, predicted_scores = get_model_inference(elem_m_outputs, config.background_class, bbox_format="yxyx")
         pred_mask = None
-  
+
+        # Fake masks (durty adapted code)
         pred_mask = np.zeros((138, 138, len(predicted_bbox)))
         target_mask = np.zeros((138, 138, len(t_bbox)))
         WandbSender.compute_map(
@@ -89,18 +87,30 @@ def compute_map_on_batch(images, target_bbox, target_class,  m_outputs: dict, co
 
 
 
-def train_log(images, t_bbox, t_class, m_outputs: dict, config, step, class_name=[], prefix="train/"):
-    # Every 1000 steps, log some progress of the training
+def train_log(data, m_outputs: dict, config, step, class_name=[], prefix="train/"):
+    # Every x steps, log some progress of the training
     # (Images with bbox and images logs)
     if step % 100 == 0:
-        tf_send_batch_log_to_wandb(images, t_bbox, t_class, m_outputs, config, class_name=class_name, step=step, prefix=prefix)
+        tf_send_batch_log_to_wandb(data["images"], data["target_bbox"], data["target_class"], m_outputs, config, config.batch_size, class_name=class_name, step=step, prefix=prefix)
 
 
-def valid_log(images, t_bbox, t_class, m_outputs: dict, config, step, global_step, class_name=[], evaluation_step=200, prefix="train/"):
+def valid_log(data: dict, m_outputs: dict, config, batch_size, step, global_step, class_name=[], evaluation_step=200, prefix="train/"):
 
     # Set the number of class
     WandbSender.init_ap_data(nb_class=len(class_name))
-    map_list = compute_map_on_batch(images, t_bbox, t_class, m_outputs, config, class_name=class_name, step=global_step, send=(step+1==evaluation_step),  prefix="val/")
+
+    # Compute AP
+    map_list = compute_map_on_batch(
+        images=data["images"], 
+        target_bbox=data["target_bbox"], 
+        target_class=data["target_class"],
+        m_outputs=m_outputs,
+        config=config, 
+        class_name=class_name,
+        step=global_step, 
+        send=(step+1==evaluation_step),  
+        prefix="val/"
+    )
     
     if step == 0:
-        tf_send_batch_log_to_wandb(images, t_bbox, t_class, m_outputs, config, class_name=class_name, step=global_step, prefix="val/")
+        tf_send_batch_log_to_wandb(data["images"], data["target_bbox"], data["target_class"], m_outputs, config, batch_size, class_name=class_name, step=global_step, prefix="val/")

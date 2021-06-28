@@ -2,11 +2,105 @@ import imageio
 import imgaug as ia
 import imgaug.augmenters as iaa
 import numpy as np
+import random
 
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 
 import tensorflow as tf
+
+
+def get_size_with_aspect_ratio(w, h, size, max_size=None):
+    
+    if max_size is not None:
+        min_original_size = float(min((w, h)))
+        max_original_size = float(max((w, h)))
+        if max_original_size / min_original_size * size > max_size:
+            size = int(round(max_size * min_original_size / max_original_size))
+
+    if (w <= h and w == size) or (h <= w and h == size):
+        return (h, w)
+
+    if w < h:
+        ow = size
+        oh = int(size * h / w)
+    else:
+        oh = size
+        ow = int(size * w / h)
+
+    return (oh, ow)
+
+
+def get_multiscale_transform(images,
+    scales=[480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800],
+    random_crop=(384, 600),
+    random_resize=[400, 500, 600],
+    max_size=None):
+    """ Coco Augmentation pipeline
+    """
+    h, w, _ =  images.shape
+
+    one_of = []
+
+    scale = np.random.choice(scales)
+    scale_height, scake_width = get_size_with_aspect_ratio(w, h, scale, max_size=max_size)
+    one_of.append(
+        iaa.Resize({"height": scale_height, "width": scake_width})
+    )
+
+    random_resize_crop = []
+    if random_resize is not None and len(random_resize) > 0:
+        scale = np.random.choice(random_resize)
+        resize_height, resize_width = get_size_with_aspect_ratio(w, h, scale)
+        random_resize_crop.append(
+            iaa.Resize({"height": resize_height, "width": resize_width})
+        )
+    if random_crop is not None:
+        crop_width = random.randint(random_crop[0], random_crop[1])
+        crop_height = random.randint(random_crop[0], random_crop[1])
+        random_resize_crop.append(
+            iaa.CropToFixedSize(crop_width, crop_height)
+        )     
+
+    random_resize_crop.append(
+        iaa.Resize({"height": scale_height, "width": scake_width})
+    )
+
+    one_of.append(iaa.Sequential(random_resize_crop))
+
+    seq = iaa.OneOf(one_of)
+    return seq
+
+
+
+def get_train_fixedsize_transform(image_size):
+    sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+    seq = iaa.Sequential([
+        iaa.Fliplr(0.5), # horizontal flips
+        sometimes(iaa.OneOf([
+            # Resize complety the image
+            iaa.Resize({"width": image_size[1], "height": image_size[0]}, interpolation=ia.ALL),
+            # Crop into the image
+            iaa.CropToFixedSize(image_size[1], image_size[0]),
+            # Affine transform
+            iaa.Affine(
+                scale={"x": (0.5, 1.5), "y": (0.5, 1.5)}, 
+            )
+        ])),
+        # Be sure to resize to the target image size
+        iaa.Resize({"width": image_size[1], "height": image_size[0]}, interpolation=ia.ALL)
+    ], random_order=False) # apply augmenters in random order
+    return seq
+
+
+def get_valid_fixedsize_transform(image_size):
+    sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+    seq = iaa.Sequential([
+        # Be sure to resize to the target image size
+        iaa.Resize({"width": image_size[1], "height": image_size[0]})
+    ], random_order=False) # apply augmenters in random order
+    return seq
+
 
 def bbox_xcyc_wh_to_imgaug_bbox(bbox, target_class, height, width):
 
@@ -64,52 +158,23 @@ def detr_aug_seq(image, config, augmenation):
     max_side_max = 1333
 
     image_size = config.image_size
-    if augmenation:
-
-        seq = iaa.Sequential([
-            iaa.Fliplr(0.5), # horizontal flips
-            sometimes(iaa.OneOf([
-                # Resize complety the image
-                iaa.Resize({"width": image_size[1], "height": image_size[0]}, interpolation=ia.ALL),
-                # Crop into the image
-                iaa.CropToFixedSize(image_size[1], image_size[0]),
-                # Affine transform
-                iaa.Affine(
-                    scale={"x": (0.5, 1.5), "y": (0.5, 1.5)}, 
-                )
-            ])),
-            # Be sure to resize to the target image size
-            iaa.Resize({"width": image_size[1], "height": image_size[0]}, interpolation=ia.ALL)
-        ], random_order=False) # apply augmenters in random order
-    
-        return seq
-
+    # Multi scale training
+    if image_size is None:
+        if augmenation:
+            return  get_multiscale_transform(image, max_size=1300)
+        else:
+            return get_multiscale_transform(
+                image, 
+                scales=[800],
+                random_crop=None,
+                random_resize=None,
+                max_size=1300
+            )
     else:
-
-        seq = iaa.Sequential([
-            # Be sure to resize to the target image size
-            iaa.Resize({"width": image_size[1], "height": image_size[0]})
-        ], random_order=False) # apply augmenters in random order
-    
-        return seq
-
-        """ Mode paper evaluation
-        # Evaluation mode, we took the largest min side the model is trained on
-        target_min_side_size = 480 
-        image_min_side = min(float(image.shape[0]), float(image.shape[1]))
-        image_max_side = max(float(image.shape[0]), float(image.shape[1]))
-        
-        min_side_scaling = target_min_side_size / image_min_side
-        max_side_scaling = max_side_max / image_max_side
-        scaling = min(min_side_scaling, max_side_scaling)
-
-        n_height = int(scaling * image.shape[0])
-        n_width = int(scaling * image.shape[1])
-
-        seq = iaa.Sequential([
-            iaa.Resize({"height": n_height, "width": n_width}),
-        ])
-        """
+        if augmenation:
+            return get_train_fixedsize_transform(image_size)
+        else:
+            return get_valid_fixedsize_transform(image_size)
 
     return seq
 

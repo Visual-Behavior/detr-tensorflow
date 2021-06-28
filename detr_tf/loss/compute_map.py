@@ -182,13 +182,6 @@ def print_maps(all_maps):
 
 def cal_map(p_bbox, p_labels, p_scores, p_mask, t_bbox, gt_classes, t_mask, ap_data, iou_thresholds):
 
-    #print("p_bbox", p_bbox.shape)
-    #print("p_labels", p_labels.shape)
-    #print("p_scores", p_scores.shape)
-    #print("p_mask", p_mask.shape)
-    #print("t_bbox", t_bbox.shape)
-    #print("gt_classes", gt_classes)
-    #print("t_mask", t_mask.shape)
 
     num_crowd = 0
     
@@ -220,8 +213,7 @@ def cal_map(p_bbox, p_labels, p_scores, p_mask, t_bbox, gt_classes, t_mask, ap_d
                  lambda i,j: crowd_mask_iou_cache[i,j].item(),
                  lambda i: mask_scores[i], mask_indices)
     ]
-    #print("run", list(classes), list(gt_classes))
-    #print(classes + gt_classes)
+
     for _class in set(list(classes) + list(gt_classes)):
         ap_per_iou = []
         num_gt_for_class = sum([1 for x in gt_classes if x == _class])

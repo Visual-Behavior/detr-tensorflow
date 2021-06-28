@@ -72,6 +72,12 @@ def get_coco_from_id(coco_id, coco, augmentation, config, img_dir):
     # Apply augmentations
     if len(t_bbox) > 0 and augmentation is not None:
         image, t_bbox, t_class = transformation.detr_transform(image, t_bbox,  t_class, config, augmentation)
+
+    # If instance into the image, set at least one bbox with -1 everywhere
+    # This kind of bbox and class will be ignore at training
+    if len(t_bbox) == 0: t_bbox = np.zeros((1, 4)) - 1
+    if len(t_class) == 0: t_class = np.zeros((1, 4)) - 1
+
     # Normalized images
     image = processing.normalized_images(image, config)
     # Set type for tensorflow        
@@ -79,17 +85,62 @@ def get_coco_from_id(coco_id, coco, augmentation, config, img_dir):
     t_bbox = t_bbox.astype(np.float32)
     t_class = t_class.astype(np.int64)
     is_crowd = np.array(is_crowd, dtype=np.int64)
-    return image, t_bbox, t_class, is_crowd
+
+    return image, t_bbox, t_class#, is_crowd
 
 
-def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_file=None, img_dir=None):
+def tensor_to_ragged(image, t_bbox, t_class):
+    # Images can have different size in multi-scale training
+    # Also, each image can have different number of instance.
+    # Therefore, we can use ragged tensor to handle Tensor with dynamic shapes.
+    # None is consider as Dynamic in the shape by the Ragged Tensor.
+    image.set_shape(tf.TensorShape([None, None, 3]))
+    image = tf.RaggedTensor.from_tensor(image).to_tensor()
+    t_bbox.set_shape(tf.TensorShape([None, 4]))
+    t_bbox = tf.RaggedTensor.from_tensor(t_bbox).to_tensor()
+    t_class.set_shape(tf.TensorShape([None, 1]))
+    t_class = tf.RaggedTensor.from_tensor(t_class).to_tensor()
+    return image, t_bbox, t_class
+
+
+def iter_tuple_to_dict(data):
+    image, t_bbox, t_class = data
+    return {
+        "images": image,
+        "target_bbox": t_bbox,
+        "target_class": t_class
+    } 
+
+
+def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_file=None, img_dir=None, shuffle_data=True):
     """ Load a coco dataset
+
+    Parameters
+    ----------
+    config: TrainingConfig
+        Instance of TrainingConfig
+    batch_size: int
+        Size of the desired batch size
+    augmentation: bool
+        Apply augmentations on the training data
+    ann_dir: str
+        Path to the coco dataset
+        If None, will be equal to config.data.ann_dir
+    ann_file: str
+        Path to the ann_file relative to the ann_dir
+        If None, will be equal to config.data.ann_file
+    img_dir: str
+        Path to the img_dir relative to the data_dir
+        If None, will be equal to config.data.img_dir
+    shuffle : bool
+        Shuffle the dataset by default
     """
     ann_dir = config.data.ann_dir if ann_dir is None else ann_dir
-    ann_file = config.data.ann_file if ann_file is None else ann_file
-    img_dir = config.data.img_dir if img_dir is None else img_dir
-
-
+    if ann_dir is None:
+        ann_file = config.data.ann_file if ann_file is None else os.path.join(config.data_dir, ann_file)
+    else:
+        ann_file = config.data.ann_file if ann_file is None else os.path.join(ann_dir, ann_file)    
+    img_dir = config.data.img_dir if img_dir is None else os.path.join(config.data_dir, img_dir)
 
     coco = COCO(ann_file)
 
@@ -106,22 +157,24 @@ def load_coco_dataset(config, batch_size, augmentation=False, ann_dir=None, ann_
 
     # Setup the data pipeline
     img_ids = coco.getImgIds()
-    shuffle(img_ids)
+
+    if shuffle_data:
+        shuffle(img_ids)
     dataset = tf.data.Dataset.from_tensor_slices(img_ids)
     # Shuffle the dataset
-    dataset = dataset.shuffle(1000)
+    if shuffle_data:
+        dataset = dataset.shuffle(1000)
+    
     # Retrieve img and labels
-    outputs_types=(tf.float32, tf.float32, tf.int64, tf.int64)
+    outputs_types=(tf.float32, tf.float32, tf.int64)
     dataset = dataset.map(lambda idx: processing.numpy_fc(
         idx, get_coco_from_id, outputs_types=outputs_types, coco=coco, augmentation=augmentation, config=config, img_dir=img_dir)
     , num_parallel_calls=tf.data.experimental.AUTOTUNE)
-    dataset = dataset.filter(lambda imgs, tbbox, tclass, iscrowd: tf.shape(tbbox)[0] > 0 and iscrowd != 1)
-    dataset = dataset.map(lambda imgs, tbbox, tclass, iscrowd: (imgs, tbbox, tclass), num_parallel_calls=tf.data.experimental.AUTOTUNE)
     
-    # Pad bbox and labels
-    dataset = dataset.map(processing.pad_labels, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-    dataset = dataset.batch(batch_size, drop_remainder=True)
+    dataset = dataset.map(tensor_to_ragged, num_parallel_calls=tf.data.experimental.AUTOTUNE)
+    dataset = dataset.apply(tf.data.experimental.dense_to_ragged_batch(batch_size=batch_size, drop_remainder=True))
     dataset = dataset.prefetch(32)
+
+    dataset.itertuple2dict = lambda data: iter_tuple_to_dict(data)
     
     return dataset, class_names

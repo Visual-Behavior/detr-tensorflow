@@ -36,7 +36,27 @@ def load_data_from_index(index, class_names, filenames, anns, config, augmentati
 
 
 def load_tfcsv_dataset(config, batch_size, augmentation=False, exclude=[], ann_dir=None, ann_file=None, img_dir=None):
-    """ Load the hardhat dataset
+    """ Load a Tensorflow csv Dataset
+
+    Parameters
+    ----------
+    config: TrainingConfig
+        Instance of TrainingConfig
+    batch_size: int
+        Size of the desired batch size
+    augmentation: bool
+        Apply augmentations on the training data
+    exclude: list
+        Exclude some class from the training. Nothing happen if empty.
+    ann_dir: str
+        Path to the coco dataset
+        If None, will be equal to config.data.ann_dir
+    ann_file: str
+        Path to the ann_file relative to the ann_dir
+        If None, will be equal to config.data.ann_file
+    img_dir: str
+        Path to the img_dir relative to the data_dir
+        If None, will be equal to config.data.img_dir
     """
     ann_dir = config.data.ann_dir if ann_dir is None else ann_dir
     ann_file = config.data.ann_file if ann_file is None else ann_file

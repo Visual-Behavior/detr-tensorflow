@@ -39,7 +39,7 @@ class DETR(tf.keras.Model):
         self.model_dim = self.transformer.model_dim
 
         self.pos_encoder = pos_encoder or PositionEmbeddingSine(
-            num_pos_features=self.model_dim // 2, normalize=True)
+            num_pos_features=self.model_dim // 2, normalize=True, name="position_embedding_sine")
 
         self.input_proj = tf.keras.layers.Conv2D(self.model_dim, kernel_size=1, name='input_proj')
 
@@ -51,7 +51,7 @@ class DETR(tf.keras.Model):
         self.bbox_embed_linear1 = Linear(self.model_dim, name='bbox_embed_0')
         self.bbox_embed_linear2 = Linear(self.model_dim, name='bbox_embed_1')
         self.bbox_embed_linear3 = Linear(4, name='bbox_embed_2')
-        self.activation = tf.keras.layers.ReLU()
+        self.activation = tf.keras.layers.ReLU(name='re_lu')
 
 
     def downsample_masks(self, masks, x):

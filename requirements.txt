@@ -5,3 +5,4 @@ pycocotools
 scikit-image
 imageio
 pandas
+imgaug==0.4.0
